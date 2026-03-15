@@ -14,9 +14,10 @@ export default defineConfig({
     port: 3001,
     host: true,
     proxy: {
-      '/api': {
+      '/pet-garden/api': {
         target: 'http://localhost:3002',
-        changeOrigin: true
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/pet-garden/, '')
       }
     }
   }
