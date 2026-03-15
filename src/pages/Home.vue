@@ -44,7 +44,8 @@ const sortAsc = ref(true)
 // Modals
 const showClassModal = ref(false)
 const showStudentModal = ref(false)
-const showEvalModal = ref(false)
+const showAddModal = ref(false)
+const showSubModal = ref(false)
 const showRankModal = ref(false)
 const showPetModal = ref(false)
 const showRecordsModal = ref(false)
@@ -52,9 +53,6 @@ const newClassName = ref('')
 const newStudentName = ref('')
 const newStudentNo = ref('')
 const selectedStudent = ref<Student | null>(null)
-const selectedCategory = ref('学习')
-const selectedPoints = ref(0)
-const selectedReason = ref('')
 const selectedPetCategory = ref<'normal' | 'mythical'>('normal')
 const evaluationRecords = ref<any[]>([])
 
@@ -68,14 +66,8 @@ const filteredStudents = computed(() => {
   return result
 })
 
-const rulesByCategory = computed(() => {
-  const result: Record<string, Rule[]> = {}
-  for (const rule of rules.value) {
-    if (!result[rule.category]) result[rule.category] = []
-    result[rule.category].push(rule)
-  }
-  return result
-})
+const addRules = computed(() => rules.value.filter(r => r.points > 0))
+const subRules = computed(() => rules.value.filter(r => r.points < 0))
 
 const filteredPets = computed(() => {
   return PET_TYPES.filter(p => p.category === selectedPetCategory.value)
@@ -91,7 +83,6 @@ async function loadClasses() {
     const res = await api.get('/classes')
     classes.value = res.data.classes
     if (classes.value.length > 0) {
-      // 如果没有当前班级，或当前班级不在列表中，选择第一个
       if (!currentClass.value || !classes.value.find(c => c.id === currentClass.value?.id)) {
         await selectClass(classes.value[0])
       }
@@ -148,15 +139,20 @@ async function deleteClass(id: string) {
 
 async function addStudent() {
   if (!newStudentName.value.trim() || !currentClass.value) return
-  await api.post('/students', {
-    classId: currentClass.value.id,
-    name: newStudentName.value.trim(),
-    studentNo: newStudentNo.value.trim() || null
-  })
-  newStudentName.value = ''
-  newStudentNo.value = ''
-  showStudentModal.value = false
-  await loadStudents()
+  try {
+    await api.post('/students', {
+      classId: currentClass.value.id,
+      name: newStudentName.value.trim(),
+      studentNo: newStudentNo.value.trim() || null
+    })
+    newStudentName.value = ''
+    newStudentNo.value = ''
+    showStudentModal.value = false
+    await loadStudents()
+  } catch (error) {
+    console.error('添加学生失败:', error)
+    alert('添加学生失败，请重试')
+  }
 }
 
 async function deleteStudent(id: string) {
@@ -185,46 +181,39 @@ async function selectPet(petId: string) {
   }
 }
 
-async function addEvaluation(student: Student) {
+function openAddModal(student: Student) {
   selectedStudent.value = student
-  showEvalModal.value = true
+  showAddModal.value = true
 }
 
-async function submitEvaluation() {
-  if (!selectedStudent.value || !selectedReason.value || !currentClass.value) return
+function openSubModal(student: Student) {
+  selectedStudent.value = student
+  showSubModal.value = true
+}
+
+async function quickAdd(student: Student, rule: Rule) {
   try {
     const res = await api.post('/evaluations', {
-      classId: currentClass.value.id,
-      studentId: selectedStudent.value.id,
-      points: selectedPoints.value,
-      reason: selectedReason.value,
-      category: selectedCategory.value
+      classId: currentClass.value?.id,
+      studentId: student.id,
+      points: rule.points,
+      reason: rule.name,
+      category: rule.category
     })
     
-    // Show level up message
     if (res.data.levelUp) {
-      const pet = getPetType(selectedStudent.value.pet_type || '')
-      alert(`🎉 ${selectedStudent.value.name} 的${pet?.name || '宠物'}升级到了 Lv.${res.data.petLevel}！`)
+      const pet = getPetType(student.pet_type || '')
+      alert(`🎉 ${student.name} 的${pet?.name || '宠物'}升级到了 Lv.${res.data.petLevel}！`)
     }
     if (res.data.graduated) {
-      alert(`🎓 恭喜！${selectedStudent.value.name} 的宠物毕业了，获得了专属徽章！`)
+      alert(`🎓 恭喜！${student.name} 的宠物毕业了，获得了专属徽章！`)
     }
     
-    showEvalModal.value = false
-    selectedReason.value = ''
-    selectedPoints.value = 0
-    selectedCategory.value = '学习'
     await loadStudents()
   } catch (error) {
     console.error('评价失败:', error)
     alert('评价失败，请重试')
   }
-}
-
-function selectRule(rule: Rule) {
-  selectedPoints.value = rule.points
-  selectedReason.value = rule.name
-  selectedCategory.value = rule.category
 }
 
 async function loadEvaluationRecords() {
@@ -267,8 +256,8 @@ onMounted(() => {
   <div class="min-h-screen bg-gray-100 flex">
     <!-- Sidebar -->
     <aside class="w-56 bg-white shadow-lg flex flex-col">
-      <div class="p-4 border-b">
-        <h1 class="text-lg font-bold text-primary">🐾 班级宠物园</h1>
+      <div class="p-4 border-b bg-primary text-white">
+        <h1 class="text-lg font-bold">🐾 班级宠物园</h1>
       </div>
       
       <!-- Tools -->
@@ -358,7 +347,7 @@ onMounted(() => {
         </div>
       </header>
 
-      <!-- Students Grid -->
+      <!-- Students List -->
       <div class="flex-1 p-6 overflow-auto">
         <div v-if="classes.length === 0" class="text-center py-20">
           <div class="text-6xl mb-4">🏫</div>
@@ -378,41 +367,58 @@ onMounted(() => {
           <p class="text-gray-500">点击右上角添加学生</p>
         </div>
 
-        <div v-else class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+        <div v-else class="space-y-3">
           <div 
             v-for="student in filteredStudents" 
             :key="student.id"
-            class="bg-white rounded-xl shadow-sm p-4 hover:shadow-md transition cursor-pointer group relative"
-            @click="addEvaluation(student)"
+            class="bg-white rounded-xl shadow-sm p-4 flex items-center gap-4 hover:shadow-md transition"
           >
-            <div class="text-center">
-              <div class="w-16 h-16 mx-auto mb-2 rounded-full overflow-hidden bg-gray-100 flex items-center justify-center" @click.stop="openPetSelect(student)">
-                <img 
-                  v-if="student.pet_type" 
-                  :src="getStudentPetImage(student)" 
-                  class="w-14 h-14 object-contain"
-                />
-                <span v-else class="text-3xl">❓</span>
+            <!-- Pet Avatar -->
+            <div 
+              class="w-14 h-14 rounded-full bg-orange-100 flex items-center justify-center overflow-hidden flex-shrink-0 cursor-pointer"
+              @click="openPetSelect(student)"
+            >
+              <img 
+                v-if="student.pet_type" 
+                :src="getStudentPetImage(student)" 
+                class="w-12 h-12 object-contain"
+              />
+              <span v-else class="text-2xl">❓</span>
+            </div>
+            
+            <!-- Info -->
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2">
+                <span class="font-bold text-gray-800">{{ student.name }}</span>
+                <span v-if="student.student_no" class="text-xs text-gray-400">({{ student.student_no }})</span>
               </div>
-              <div class="font-bold text-gray-800">{{ student.name }}</div>
-              <div v-if="student.student_no" class="text-xs text-gray-400">{{ student.student_no }}</div>
-              <div class="flex items-center justify-center gap-2 mt-2">
-                <span class="text-sm text-gray-600">Lv.{{ student.pet_level }}</span>
-                <span class="text-sm font-medium text-primary">+{{ student.total_points }}</span>
-              </div>
-              <div class="mt-2 bg-gray-200 rounded-full h-2">
-                <div 
-                  class="bg-primary rounded-full h-2 transition-all"
-                  :style="{ width: `${Math.min(100, (getLevelProgress(student.pet_exp).current / getLevelProgress(student.pet_exp).required) * 100)}%` }"
-                ></div>
+              <div class="flex items-center gap-3 mt-1">
+                <span class="text-sm text-gray-500">Lv.{{ student.pet_level }}</span>
+                <div class="flex-1 bg-gray-200 rounded-full h-2 max-w-[100px]">
+                  <div 
+                    class="bg-primary rounded-full h-2 transition-all"
+                    :style="{ width: `${Math.min(100, (getLevelProgress(student.pet_exp).current / getLevelProgress(student.pet_exp).required) * 100)}%` }"
+                  ></div>
+                </div>
+                <span class="text-sm font-bold text-primary">+{{ student.total_points }}</span>
               </div>
             </div>
-            <button 
-              @click.stop="deleteStudent(student.id)"
-              class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-700 text-xs bg-white rounded-full w-5 h-5 flex items-center justify-center"
-            >
-              ✕
-            </button>
+            
+            <!-- Actions -->
+            <div class="flex gap-2 flex-shrink-0">
+              <button 
+                @click="openAddModal(student)"
+                class="w-10 h-10 bg-green-500 text-white rounded-full text-xl font-bold hover:bg-green-600 shadow"
+              >
+                +
+              </button>
+              <button 
+                @click="openSubModal(student)"
+                class="w-10 h-10 bg-red-500 text-white rounded-full text-xl font-bold hover:bg-red-600 shadow"
+              >
+                -
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -459,61 +465,52 @@ onMounted(() => {
       </div>
     </div>
 
-    <!-- Evaluation Modal -->
-    <div v-if="showEvalModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div class="bg-white rounded-xl p-6 w-[500px] max-h-[80vh] overflow-auto">
+    <!-- Add Points Modal -->
+    <div v-if="showAddModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div class="bg-white rounded-xl p-6 w-[400px] max-h-[80vh] overflow-auto">
         <h3 class="text-lg font-bold mb-4">
-          为 <span class="text-primary">{{ selectedStudent?.name }}</span> 加分/扣分
+          为 <span class="text-primary">{{ selectedStudent?.name }}</span> 加分
         </h3>
         
-        <!-- Quick Rules -->
-        <div class="mb-4">
-          <div class="text-sm text-gray-500 mb-2">快速选择：</div>
-          <div class="grid grid-cols-3 gap-2">
-            <template v-for="(rlist, cat) in rulesByCategory" :key="cat">
-              <button 
-                v-for="rule in rlist.slice(0, 3)" 
-                :key="rule.id"
-                @click="selectRule(rule)"
-                class="text-left px-3 py-2 rounded border text-sm hover:bg-gray-50"
-                :class="rule.points > 0 ? 'border-green-200' : 'border-red-200'"
-              >
-                <span :class="rule.points > 0 ? 'text-green-600' : 'text-red-600'">
-                  {{ rule.points > 0 ? '+' : '' }}{{ rule.points }}
-                </span>
-                {{ rule.name }}
-              </button>
-            </template>
-          </div>
+        <div class="grid grid-cols-2 gap-2">
+          <button 
+            v-for="rule in addRules" 
+            :key="rule.id"
+            @click="quickAdd(selectedStudent!, rule); showAddModal = false"
+            class="bg-green-50 border border-green-200 rounded-lg p-3 text-left hover:bg-green-100 transition"
+          >
+            <div class="font-bold text-green-600">+{{ rule.points }}</div>
+            <div class="text-sm text-gray-700">{{ rule.name }}</div>
+          </button>
         </div>
 
-        <!-- Custom Input -->
-        <div class="border-t pt-4">
-          <div class="flex gap-2 mb-3">
-            <select v-model="selectedCategory" class="border rounded px-3 py-2">
-              <option>学习</option>
-              <option>行为</option>
-              <option>健康</option>
-              <option>其他</option>
-            </select>
-            <input 
-              v-model.number="selectedPoints"
-              type="number" 
-              placeholder="分值"
-              class="w-24 border rounded px-3 py-2"
-            />
-          </div>
-          <input 
-            v-model="selectedReason"
-            type="text" 
-            placeholder="原因"
-            class="w-full border rounded px-3 py-2 mb-4"
-          />
+        <div class="flex justify-end mt-4">
+          <button @click="showAddModal = false" class="px-4 py-2 text-gray-500">取消</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Subtract Points Modal -->
+    <div v-if="showSubModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div class="bg-white rounded-xl p-6 w-[400px] max-h-[80vh] overflow-auto">
+        <h3 class="text-lg font-bold mb-4">
+          为 <span class="text-red-500">{{ selectedStudent?.name }}</span> 扣分
+        </h3>
+        
+        <div class="grid grid-cols-2 gap-2">
+          <button 
+            v-for="rule in subRules" 
+            :key="rule.id"
+            @click="quickAdd(selectedStudent!, rule); showSubModal = false"
+            class="bg-red-50 border border-red-200 rounded-lg p-3 text-left hover:bg-red-100 transition"
+          >
+            <div class="font-bold text-red-600">{{ rule.points }}</div>
+            <div class="text-sm text-gray-700">{{ rule.name }}</div>
+          </button>
         </div>
 
-        <div class="flex gap-2 justify-end">
-          <button @click="showEvalModal = false" class="px-4 py-2 text-gray-500">取消</button>
-          <button @click="submitEvaluation" class="bg-primary text-white px-4 py-2 rounded-lg">确认</button>
+        <div class="flex justify-end mt-4">
+          <button @click="showSubModal = false" class="px-4 py-2 text-gray-500">取消</button>
         </div>
       </div>
     </div>
@@ -532,7 +529,7 @@ onMounted(() => {
             class="px-4 py-2 rounded-lg text-sm font-medium transition"
             :class="selectedPetCategory === 'normal' ? 'bg-primary text-white' : 'bg-gray-100 text-gray-600'"
           >
-            🐾 普通动物 (17种)
+            🐾 普通动物 (18种)
           </button>
           <button 
             @click="selectedPetCategory = 'mythical'"
