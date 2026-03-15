@@ -80,10 +80,20 @@ const ranking = computed(() => {
 
 // API calls
 async function loadClasses() {
-  const res = await axios.get('/api/classes')
-  classes.value = res.data.classes
-  if (classes.value.length > 0 && !currentClass.value) {
-    selectClass(classes.value[0])
+  try {
+    const res = await axios.get('/api/classes')
+    classes.value = res.data.classes
+    if (classes.value.length > 0) {
+      // 如果没有当前班级，或当前班级不在列表中，选择第一个
+      if (!currentClass.value || !classes.value.find(c => c.id === currentClass.value?.id)) {
+        await selectClass(classes.value[0])
+      }
+    } else {
+      currentClass.value = null
+      students.value = []
+    }
+  } catch (error) {
+    console.error('加载班级失败:', error)
   }
 }
 
@@ -104,11 +114,19 @@ async function loadRules() {
 }
 
 async function createClass() {
-  if (!newClassName.value.trim()) return
-  await axios.post('/api/classes', { name: newClassName.value.trim() })
-  newClassName.value = ''
-  showClassModal.value = false
-  await loadClasses()
+  if (!newClassName.value.trim()) {
+    alert('请输入班级名称')
+    return
+  }
+  try {
+    await axios.post('/api/classes', { name: newClassName.value.trim() })
+    newClassName.value = ''
+    showClassModal.value = false
+    await loadClasses()
+  } catch (error) {
+    console.error('创建班级失败:', error)
+    alert('创建班级失败，请重试')
+  }
 }
 
 async function deleteClass(id: string) {
