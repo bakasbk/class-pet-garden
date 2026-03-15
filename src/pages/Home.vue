@@ -170,10 +170,17 @@ async function openPetSelect(student: Student) {
 
 async function selectPet(petId: string) {
   if (!selectedStudent.value) return
-  await api.put(`/students/${selectedStudent.value.id}/pet`, { petType: petId })
-  showPetModal.value = false
-  selectedStudent.value = null
-  await loadStudents()
+  try {
+    await api.put(`/students/${selectedStudent.value.id}/pet`, { petType: petId })
+    const pet = getPetType(petId)
+    alert(`🎉 ${selectedStudent.value.name} 领养了一只 ${pet?.name || '宠物'}！`)
+    showPetModal.value = false
+    selectedStudent.value = null
+    await loadStudents()
+  } catch (error) {
+    console.error('领养宠物失败:', error)
+    alert('领养失败，请重试')
+  }
 }
 
 async function addEvaluation(student: Student) {
@@ -483,7 +490,7 @@ onMounted(() => {
             class="px-4 py-2 rounded-lg text-sm font-medium transition"
             :class="selectedPetCategory === 'normal' ? 'bg-primary text-white' : 'bg-gray-100 text-gray-600'"
           >
-            🐾 普通动物 (16种)
+            🐾 普通动物 (17种)
           </button>
           <button 
             @click="selectedPetCategory = 'mythical'"
@@ -500,15 +507,19 @@ onMounted(() => {
             v-for="pet in filteredPets" 
             :key="pet.id"
             @click="selectPet(pet.id)"
-            class="bg-gray-50 rounded-xl p-3 hover:bg-orange-50 hover:ring-2 hover:ring-primary transition text-center"
+            class="bg-gray-50 rounded-xl p-3 hover:bg-orange-50 hover:ring-2 hover:ring-primary transition text-center group"
           >
-            <img :src="pet.image" class="w-12 h-12 mx-auto object-contain" />
+            <img :src="pet.image" class="w-12 h-12 mx-auto object-contain group-hover:scale-110 transition-transform" />
             <div class="text-xs font-medium mt-1 text-gray-700">{{ pet.name }}</div>
           </button>
         </div>
 
+        <div class="mt-4 p-3 bg-orange-50 rounded-lg text-sm text-gray-600">
+          💡 点击宠物即可领养，宠物会陪伴学生一起成长！
+        </div>
+
         <div class="flex justify-end mt-4">
-          <button @click="showPetModal = false" class="px-4 py-2 text-gray-500">取消</button>
+          <button @click="showPetModal = false" class="px-4 py-2 text-gray-500 hover:text-gray-700">取消</button>
         </div>
       </div>
     </div>

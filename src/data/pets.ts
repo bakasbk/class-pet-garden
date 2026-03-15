@@ -22,6 +22,8 @@ export const PET_TYPES: PetType[] = [
   { id: 'orange-cat', name: '橘猫', category: 'normal', image: '/pet-garden/images/pets/normal/orange-cat.png' },
   { id: 'lop-rabbit', name: '垂耳兔', category: 'normal', image: '/pet-garden/images/pets/normal/lop-rabbit.png' },
   { id: 'angora-rabbit', name: '安哥拉兔', category: 'normal', image: '/pet-garden/images/pets/normal/angora-rabbit.png' },
+  { id: 'hamster', name: '仓鼠', category: 'normal', image: '/pet-garden/images/pets/normal/hamster.png' },
+  { id: 'winter-hamster', name: '银狐仓鼠', category: 'normal', image: '/pet-garden/images/pets/normal/winter-hamster.png' },
   { id: 'call-duck', name: '柯尔鸭', category: 'normal', image: '/pet-garden/images/pets/normal/call-duck.png' },
   { id: 'alpaca', name: '羊驼', category: 'normal', image: '/pet-garden/images/pets/normal/alpaca.png' },
   { id: 'red-panda', name: '小熊猫', category: 'normal', image: '/pet-garden/images/pets/normal/red-panda.png' },
