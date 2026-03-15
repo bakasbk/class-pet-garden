@@ -107,12 +107,15 @@ db.exec(`
 const rulesCount = db.prepare('SELECT COUNT(*) as count FROM evaluation_rules').get()
 if (rulesCount && rulesCount.count === 0) {
   const defaultRules = [
+    // ===== 学习类 (16条: 奖9, 惩7) =====
     // 学习加分
     { id: uuidv4(), name: '作业完成优秀', points: 1, category: '学习' },
     { id: uuidv4(), name: '平时测验满分', points: 3, category: '学习' },
     { id: uuidv4(), name: '平时测验达优秀', points: 2, category: '学习' },
     { id: uuidv4(), name: '默写全对', points: 1, category: '学习' },
     { id: uuidv4(), name: '订正态度认真', points: 1, category: '学习' },
+    { id: uuidv4(), name: '优秀作业,值得表扬', points: 1, category: '学习' },
+    { id: uuidv4(), name: '近期学习状态进步', points: 1, category: '学习' },
     { id: uuidv4(), name: '被老师点名表扬', points: 1, category: '学习' },
     { id: uuidv4(), name: '单元测验显著进步', points: 2, category: '学习' },
     // 学习扣分
@@ -122,15 +125,94 @@ if (rulesCount && rulesCount.count === 0) {
     { id: uuidv4(), name: '订正不认真', points: -2, category: '学习' },
     { id: uuidv4(), name: '抄袭作业', points: -5, category: '学习' },
     { id: uuidv4(), name: '考试作弊', points: -5, category: '学习' },
+    { id: uuidv4(), name: '学习显著退步', points: -2, category: '学习' },
+    
+    // ===== 行为类 (32条: 奖13, 惩19) =====
     // 行为加分
     { id: uuidv4(), name: '早读认真专注', points: 1, category: '行为' },
     { id: uuidv4(), name: '课前准备充分', points: 1, category: '行为' },
+    { id: uuidv4(), name: '眼保健操全程认真', points: 1, category: '行为' },
+    { id: uuidv4(), name: '升旗仪式安静整齐', points: 1, category: '行为' },
+    { id: uuidv4(), name: '守纪表现优秀(被表扬)', points: 2, category: '行为' },
     { id: uuidv4(), name: '主动帮助同学', points: 2, category: '行为' },
-    { id: uuidv4(), name: '拾金不昧', points: 2, category: '行为' },
+    { id: uuidv4(), name: '拾金不昧(一般物品)', points: 2, category: '行为' },
+    { id: uuidv4(), name: '拾金不昧(贵重物品)', points: 5, category: '行为' },
+    { id: uuidv4(), name: '主动帮助生病同学', points: 3, category: '行为' },
+    { id: uuidv4(), name: '主动调解同学矛盾、化解冲突', points: 3, category: '行为' },
+    { id: uuidv4(), name: '做好人好事被学校提出表扬', points: 3, category: '行为' },
+    { id: uuidv4(), name: '积极参与校内外志愿服务', points: 3, category: '行为' },
+    { id: uuidv4(), name: '犯错主动认错,积极协商', points: 1, category: '行为' },
     // 行为扣分
     { id: uuidv4(), name: '无故迟到或早退', points: -1, category: '行为' },
+    { id: uuidv4(), name: '未佩戴红领巾,不穿校服', points: -1, category: '行为' },
+    { id: uuidv4(), name: '私自旷课或课间操', points: -3, category: '行为' },
     { id: uuidv4(), name: '上课讲话、开小差', points: -1, category: '行为' },
-    { id: uuidv4(), name: '说脏话、骂人', points: -2, category: '行为' },
+    { id: uuidv4(), name: '扰乱课堂', points: -3, category: '行为' },
+    { id: uuidv4(), name: '课间追逐打闹', points: -3, category: '行为' },
+    { id: uuidv4(), name: '追逐打闹(酿成事故)', points: -3, category: '行为' },
+    { id: uuidv4(), name: '中午自习说话、随意走动', points: -1, category: '行为' },
+    { id: uuidv4(), name: '私自带玩具或零食或危险物品', points: -3, category: '行为' },
+    { id: uuidv4(), name: '排队时说话或小动作不停,被点名', points: -1, category: '行为' },
+    { id: uuidv4(), name: '传播脏话或不良歌谣', points: -5, category: '行为' },
+    { id: uuidv4(), name: '撒谎、隐瞒真实情况', points: -2, category: '行为' },
+    { id: uuidv4(), name: '说脏话,骂人,起绰号', points: -2, category: '行为' },
+    { id: uuidv4(), name: '欺负、推搡、伤害同学', points: -10, category: '行为' },
+    { id: uuidv4(), name: '挑拨离间、拉帮结派', points: -3, category: '行为' },
+    { id: uuidv4(), name: '不尊重同学、孤立他人', points: -3, category: '行为' },
+    { id: uuidv4(), name: '为私欲包庇犯错者', points: -3, category: '行为' },
+    { id: uuidv4(), name: '恶意举报、诬陷他人', points: -3, category: '行为' },
+    { id: uuidv4(), name: '破坏校园设施', points: -5, category: '行为' },
+    
+    // ===== 健康类 (14条: 奖7, 惩7) =====
+    // 健康加分
+    { id: uuidv4(), name: '认真完成包干区值日', points: 1, category: '健康' },
+    { id: uuidv4(), name: '主动为班级擦黑板', points: 1, category: '健康' },
+    { id: uuidv4(), name: '主动整理讲台', points: 1, category: '健康' },
+    { id: uuidv4(), name: '主动整理黑板粉笔槽', points: 1, category: '健康' },
+    { id: uuidv4(), name: '主动倒垃圾并套垃圾袋', points: 2, category: '健康' },
+    { id: uuidv4(), name: '座位整洁无涂画,桌椅干净', points: 1, category: '健康' },
+    { id: uuidv4(), name: '座位周围无垃圾', points: 1, category: '健康' },
+    // 健康扣分
+    { id: uuidv4(), name: '打扫包干区时间玩耍,不认真', points: -2, category: '健康' },
+    { id: uuidv4(), name: '个人座位卫生不合格', points: -1, category: '健康' },
+    { id: uuidv4(), name: '校园内乱扔垃圾', points: -1, category: '健康' },
+    { id: uuidv4(), name: '桌洞脏乱、物品杂乱', points: -1, category: '健康' },
+    { id: uuidv4(), name: '破坏卫生、乱涂乱画', points: -2, category: '健康' },
+    { id: uuidv4(), name: '浪费粮食', points: -2, category: '健康' },
+    { id: uuidv4(), name: '破坏班级绿植、把玩绿植', points: -3, category: '健康' },
+    
+    // ===== 其他类 (21条: 奖16, 惩5) =====
+    // 其他加分
+    { id: uuidv4(), name: '主动整理图书、摆放整齐', points: 2, category: '其他' },
+    { id: uuidv4(), name: '主动帮同学更换桌椅', points: 2, category: '其他' },
+    { id: uuidv4(), name: '主动承担班级任务', points: 2, category: '其他' },
+    { id: uuidv4(), name: '积极参加班级墙面布置', points: 2, category: '其他' },
+    { id: uuidv4(), name: '积极参加班级或学校活动', points: 1, category: '其他' },
+    { id: uuidv4(), name: '活动中表现优秀', points: 2, category: '其他' },
+    { id: uuidv4(), name: '代表班级参赛', points: 3, category: '其他' },
+    { id: uuidv4(), name: '校级比赛:一等奖', points: 5, category: '其他' },
+    { id: uuidv4(), name: '校级比赛:二等奖', points: 4, category: '其他' },
+    { id: uuidv4(), name: '校级比赛:三等奖', points: 3, category: '其他' },
+    { id: uuidv4(), name: '区级及以上:一等奖', points: 8, category: '其他' },
+    { id: uuidv4(), name: '区级及以上:二等奖', points: 6, category: '其他' },
+    { id: uuidv4(), name: '区级及以上:三等奖', points: 4, category: '其他' },
+    { id: uuidv4(), name: '联欢会或文艺汇演积极参与', points: 2, category: '其他' },
+    { id: uuidv4(), name: '为班级争得荣誉', points: 5, category: '其他' },
+    { id: uuidv4(), name: '小组全周无违纪、全员交作业', points: 2, category: '其他' },
+    // 其他扣分
+    { id: uuidv4(), name: '损坏公物、乱刻乱画', points: -1, category: '其他' },
+    { id: uuidv4(), name: '浪费水电、屡教不改', points: -1, category: '其他' },
+    { id: uuidv4(), name: '故意玩弄损坏公共电器', points: -3, category: '其他' },
+    { id: uuidv4(), name: '故意损坏卫生工具', points: -2, category: '其他' },
+    { id: uuidv4(), name: '扣分严重/打架/作弊/严重违纪', points: -8, category: '其他' },
+  ]
+  
+  const insertRule = db.prepare('INSERT INTO evaluation_rules (id, name, points, category, is_custom, created_at) VALUES (?, ?, ?, ?, 0, ?)')
+  const now = Date.now()
+  for (const rule of defaultRules) {
+    insertRule.run(rule.id, rule.name, rule.points, rule.category, now)
+  }
+} uuidv4(), name: '说脏话、骂人', points: -2, category: '行为' },
     { id: uuidv4(), name: '欺负同学', points: -10, category: '行为' },
   ]
   

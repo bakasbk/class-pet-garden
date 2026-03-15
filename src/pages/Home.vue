@@ -71,6 +71,28 @@ const deleteStudentList = ref<string[]>([])
 const recordsPage = ref(1)
 const recordsPageSize = 20
 const totalRecords = ref(0)
+const sortBy = ref<'name' | 'studentNo' | 'progress'>('name')
+const sortOrder = ref<'asc' | 'desc'>('asc')
+const showSortMenu = ref(false)
+
+const sortLabel = computed(() => {
+  switch (sortBy.value) {
+    case 'name': return '姓名'
+    case 'studentNo': return '学号'
+    case 'progress': return '养成'
+    default: return '排序'
+  }
+})
+
+function toggleSortMenu() {
+  showSortMenu.value = !showSortMenu.value
+}
+
+function setSort(by: 'name' | 'studentNo' | 'progress', order: 'asc' | 'desc') {
+  sortBy.value = by
+  sortOrder.value = order
+  showSortMenu.value = false
+}
 
 // Computed
 const filteredStudents = computed(() => {
@@ -78,7 +100,33 @@ const filteredStudents = computed(() => {
   if (searchQuery.value) {
     result = result.filter(s => s.name.includes(searchQuery.value))
   }
-  result.sort((a, b) => sortAsc.value ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name))
+  
+  // Sort
+  result.sort((a, b) => {
+    let comparison = 0
+    switch (sortBy.value) {
+      case 'name':
+        comparison = a.name.localeCompare(b.name)
+        break
+      case 'studentNo':
+        const noA = a.student_no || ''
+        const noB = b.student_no || ''
+        comparison = noA.localeCompare(noB)
+        break
+      case 'progress':
+        // 按宠物等级和经验排序
+        const levelA = a.pet_level || 0
+        const levelB = b.pet_level || 0
+        if (levelA !== levelB) {
+          comparison = levelA - levelB
+        } else {
+          comparison = (a.pet_exp || 0) - (b.pet_exp || 0)
+        }
+        break
+    }
+    return sortOrder.value === 'asc' ? comparison : -comparison
+  })
+  
   return result
 })
 
@@ -565,6 +613,20 @@ onMounted(() => {
           placeholder="🔍 搜索"
           class="border-0 rounded-lg px-3 py-1.5 text-sm w-32 bg-white/90 hover:bg-white shadow focus:outline-none focus:ring-2 focus:ring-white/50"
         />
+        
+        <!-- Sort Menu -->
+        <div class="relative" v-if="!batchMode">
+          <button @click="toggleSortMenu" class="px-3 py-1.5 rounded-lg text-sm bg-white/90 hover:bg-white shadow">
+            📊 {{ sortLabel }} {{ sortOrder === 'asc' ? '▲' : '▼' }}
+          </button>
+          <div v-if="showSortMenu" @click="showSortMenu = false" class="fixed inset-0 z-40"></div>
+          <div v-if="showSortMenu" class="absolute right-0 top-full mt-1 bg-white rounded-lg shadow-lg border py-1 w-40 z-50">
+            <button @click="setSort('name', 'asc')" class="w-full text-left px-4 py-2 text-sm hover:bg-orange-50" :class="sortBy === 'name' && sortOrder === 'asc' ? 'bg-orange-50 text-orange-600' : ''">姓名 A-Z</button>
+            <button @click="setSort('name', 'desc')" class="w-full text-left px-4 py-2 text-sm hover:bg-orange-50" :class="sortBy === 'name' && sortOrder === 'desc' ? 'bg-orange-50 text-orange-600' : ''">姓名 Z-A</button>
+            <button @click="setSort('studentNo', 'asc')" class="w-full text-left px-4 py-2 text-sm hover:bg-orange-50" :class="sortBy === 'studentNo' ? 'bg-orange-50 text-orange-600' : ''">学号排序</button>
+            <button @click="setSort('progress', 'desc')" class="w-full text-left px-4 py-2 text-sm hover:bg-orange-50" :class="sortBy === 'progress' ? 'bg-orange-50 text-orange-600' : ''">养成进度</button>
+          </div>
+        </div>
         
         <!-- Class Menu -->
         <div class="relative" v-if="!batchMode">
