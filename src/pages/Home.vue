@@ -82,6 +82,7 @@ const isLoading = ref(true)
 
 // 图片加载状态
 const imageLoaded = ref<Record<string, boolean>>({})
+const studentImageLoaded = ref<Record<string, boolean>>({})
 
 // 详情面板
 const showDetailPanel = ref(false)
@@ -994,11 +995,29 @@ onMounted(async () => {
               <div class="aspect-square flex items-center justify-center overflow-hidden relative"
                 :class="student.pet_type ? 'bg-gradient-to-br from-orange-100 via-amber-50 to-yellow-100' : 'bg-gradient-to-br from-gray-100 via-slate-50 to-gray-100'"
               >
-                <img 
-                  v-if="student.pet_type" 
-                  :src="getStudentPetImage(student)" 
-                  class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                />
+                <!-- 有宠物时的加载动画 -->
+                <template v-if="student.pet_type">
+                  <!-- 加载动画 - 宠物主题 paw prints -->
+                  <div 
+                    v-if="!studentImageLoaded[student.id]" 
+                    class="absolute inset-0 flex flex-col items-center justify-center"
+                  >
+                    <div class="flex items-center gap-2">
+                      <span class="text-2xl animate-bounce" style="animation-delay: 0ms">🐾</span>
+                      <span class="text-2xl animate-bounce" style="animation-delay: 150ms">🐾</span>
+                      <span class="text-2xl animate-bounce" style="animation-delay: 300ms">🐾</span>
+                    </div>
+                    <div class="mt-2 text-xs text-orange-400 font-medium">加载中...</div>
+                  </div>
+                  <!-- 宠物图片 -->
+                  <img 
+                    :src="getStudentPetImage(student)" 
+                    class="w-full h-full object-cover group-hover:scale-110 transition-all duration-500"
+                    :class="studentImageLoaded[student.id] ? 'opacity-100' : 'opacity-0'"
+                    @load="studentImageLoaded[student.id] = true"
+                  />
+                </template>
+                <!-- 未领养宠物 -->
                 <div v-else class="flex flex-col items-center">
                   <span class="text-6xl pet-unknown">❓</span>
                   <span class="text-xs text-gray-400 mt-2 group-hover:text-orange-400 transition-colors">点击领养</span>
