@@ -1,15 +1,15 @@
 # 宠物等级图片生成操作指南
 
-> 目标：为班级宠物园系统中的所有宠物生成8个等级的图片
+> 目标：为班级宠物园系统中的所有宠物品种生成8个等级的图片
 > 技术：SiliconFlow FLUX.1-dev
-> 核心：每种宠物独立设计装饰，严格统一画风
+> 核心：每个品种独立设计装饰，严格统一画风
 
 ---
 
 ## 一、设计理念
 
 ### 核心原则
-- **一宠一设计**：每种宠物独立设计装饰，符合宠物特性
+- **一品种一设计**：每个犬种/猫种独立设计装饰，符合品种特性
 - **严格画风统一**：所有图片使用完全相同的风格描述词
 - **装饰升级体现成长**：从简单到华丽，体现等级提升
 
@@ -27,97 +27,96 @@ busy background, text, watermark, signature, blurry, low quality,
 different style, inconsistent design"
 ```
 
-**关键：**
-- 使用 `flat cartoon illustration` 确保扁平风格
-- 使用 `consistent character design` 确保一致性
-- 使用 `white background` 或简单背景，避免背景干扰
-- 使用 `2D vector art style` 确保矢量感
+---
+
+## 二、系统宠物品种清单
+
+### 犬类（15种）
+
+| ID | 名称 | 品种特征 | 装饰设计状态 |
+|----|------|---------|-------------|
+| west-highland | 西高地 | 白色梗犬，立耳 | ⏳ 待设计 |
+| bichon | 比熊 | 白色卷毛，圆脸 | ⏳ 待设计 |
+| border-collie | 边牧 | 黑白/三色，聪明 | ⏳ 待设计 |
+| shiba | 柴犬 | 日本柴犬，卷尾 | ⏳ 待设计 |
+| golden-retriever | 金毛 | 金色长毛，温顺 | ⏳ 待设计 |
+| samoyed | 萨摩耶 | 白色长毛，微笑 | ⏳ 待设计 |
+| corgi | 柯基 | 短腿，大耳朵 | ⏳ 待设计 |
+| pomeranian | 博美 | 小型，蓬松 | ⏳ 待设计 |
+| poodle | 贵宾 | 卷毛，优雅 | ⏳ 待设计 |
+| dachshund | 腊肠 | 长身，短腿 | ⏳ 待设计 |
+| beagle | 比格 | 三色，大耳朵 | ⏳ 待设计 |
+| husky | 哈士奇 | 蓝眼，狼-like | ⏳ 待设计 |
+| alaska | 阿拉斯加 | 大型，长毛 | ⏳ 待设计 |
+| chihuahua | 吉娃娃 | 小型，大耳 | ⏳ 待设计 |
+| french-bulldog | 法斗 | 短毛，蝙蝠耳 | ⏳ 待设计 |
+
+### 猫类（3种）
+
+| ID | 名称 | 品种特征 | 装饰设计状态 |
+|----|------|---------|-------------|
+| short-leg-cat | 矮脚猫 | 短腿，可爱 | ⏳ 待设计 |
+| ragdoll | 布偶 | 蓝眼，长毛 | ⏳ 待设计 |
+| golden-gradient | 金渐层 | 金色渐变毛 | ⏳ 待设计 |
+
+### 神兽（7种）
+
+| ID | 名称 | 特征 | 装饰设计状态 |
+|----|------|------|-------------|
+| dragon | 小龙 | 龙形，翅膀 | ⏳ 待设计 |
+| phoenix | 凤凰 | 火鸟，羽毛 | ⏳ 待设计 |
+| unicorn | 独角兽 | 独角，马身 | ⏳ 待设计 |
+| kirin | 麒麟 | 鹿角，鳞身 | ⏳ 待设计 |
+| pegasus | 飞马 | 马+翅膀 | ⏳ 待设计 |
+| nine-tailed-fox | 九尾狐 | 九尾，狐形 | ⏳ 待设计 |
+| qilin | 青龙 | 龙形，青色 | ⏳ 待设计 |
 
 ---
 
-## 二、当前系统宠物清单
-
-### 普通动物
-
-| ID | 名称 | 装饰设计状态 |
-|----|------|-------------|
-| cat | 🐱 小猫 | ✅ 已完成 |
-| dog | 🐶 小狗 | ⏳ 待设计 |
-| rabbit | 🐰 兔子 | ⏳ 待设计 |
-| hamster | 🐹 仓鼠 | ⏳ 待设计 |
-| bird | 🐦 小鸟 | ⏳ 待设计 |
-| fish | 🐠 小鱼 | ⏳ 待设计 |
-| turtle | 🐢 小龟 | ⏳ 待设计 |
-| frog | 🐸 青蛙 | ⏳ 待设计 |
-| duck | 🦆 小鸭 | ⏳ 待设计 |
-| penguin | 🐧 企鹅 | ⏳ 待设计 |
-| bear | 🐻 小熊 | ⏳ 待设计 |
-| fox | 🦊 狐狸 | ⏳ 待设计 |
-| deer | 🦌 小鹿 | ⏳ 待设计 |
-| squirrel | 🐿️ 松鼠 | ⏳ 待设计 |
-| panda | 🐼 熊猫 | ⏳ 待设计 |
-| koala | 🐨 考拉 | ⏳ 待设计 |
-| hedgehog | 🦔 刺猬 | ⏳ 待设计 |
-| owl | 🦉 猫头鹰 | ⏳ 待设计 |
-
-### 神兽
-
-| ID | 名称 | 装饰设计状态 |
-|----|------|-------------|
-| dragon | 🐲 小龙 | ⏳ 待设计 |
-| phoenix | 🔥 凤凰 | ⏳ 待设计 |
-| unicorn | 🦄 独角兽 | ⏳ 待设计 |
-| kirin | 🦌 麒麟 | ⏳ 待设计 |
-| pegasus | 🐴 飞马 | ⏳ 待设计 |
-| nine_tailed_fox | 🦊 九尾狐 | ⏳ 待设计 |
-| qilin | 🐉 青龙 | ⏳ 待设计 |
-
----
-
-## 三、宠物装饰设计
+## 三、品种装饰设计
 
 ### 设计原则
-1. **符合宠物特性**：猫用猫相关装饰，狗用狗相关装饰
+1. **符合品种特性**：柯基用皇室元素（英国女王），柴犬用日本元素
 2. **等级递进清晰**：Lv.1简单 → Lv.8华丽神圣
 3. **装饰可见性**：一眼可见，不模糊
-4. **风格统一性**：所有宠物使用相同画风描述
+4. **风格统一性**：所有品种使用相同画风描述
 
-### 设计模板
-
-每种宠物需要设计8个等级的装饰：
-
-| 等级 | 主题 | 设计要点 |
-|------|------|---------|
-| Lv.1 | 婴儿期 | 最简单的小装饰，突出可爱 |
-| Lv.2 | 幼年期 | 添加宠物喜欢的元素 |
-| Lv.3 | 成长期 | 开始添加身份标识 |
-| Lv.4 | 少年期 | 华丽版宠物元素 |
-| Lv.5 | 青年期 | 小皇冠+宠物印记 |
-| Lv.6 | 成熟期 | 皇冠+翅膀，天使形象 |
-| Lv.7 | 王者期 | 大翅膀+光环，强大气场 |
-| Lv.8 | 传说期 | 完全神圣化+漂浮+符号环绕 |
-
-### 示例：小猫装饰设计
+### 示例：柯基装饰设计
 
 | 等级 | 装饰 | 具体元素 | 设计理念 |
 |------|------|---------|---------|
-| Lv.1 | 粉色小蝴蝶结 | 蝴蝶结 | 最简装饰，突出可爱 |
-| Lv.2 | 铃铛项圈+毛线球 | 铃铛、毛线 | 猫喜欢玩毛线 |
-| Lv.3 | 星星猫耳发饰 | 星星、猫耳 | 猫耳元素+星星 |
-| Lv.4 | 小鱼骨项链 | 鱼骨、项链 | 猫爱吃鱼 |
-| Lv.5 | 小皇冠+猫爪印记 | 皇冠、爪印 | 王者气质 |
-| Lv.6 | 皇冠+猫耳+小翅膀 | 皇冠、翅膀 | 猫耳天使 |
-| Lv.7 | 大翅膀+猫爪光环 | 翅膀、光环 | 强大气场 |
-| Lv.8 | 神圣皇冠+大翅膀+漂浮+猫爪符号 | 皇冠、翅膀、符号 | 完全神圣化 |
+| Lv.1 | 小红领结 | 红色蝴蝶结 | 简单可爱 |
+| Lv.2 | 英国国旗项圈 | 米字旗元素 | 英国品种 |
+| Lv.3 | 皇冠+短腿印记 | 小皇冠 | 皇室关联 |
+| Lv.4 | 华丽项圈+宝石 | 金色+宝石 | 贵族气质 |
+| Lv.5 | 小王冠+披风 | 皇冠+小披风 | 小国王 |
+| Lv.6 | 皇冠+翅膀+光环 | 天使柯基 | 飞翔梦想 |
+| Lv.7 | 大翅膀+皇家光环 | 皇家天使 | 高贵守护 |
+| Lv.8 | 神圣皇冠+大翅膀+漂浮+英国符号 | 神圣皇家 | 完全神圣化 |
 
-### 待设计宠物
+### 示例：柴犬装饰设计
 
-请按顺序设计以下宠物的装饰：
-1. dog - 小狗
-2. rabbit - 兔子
-3. hamster - 仓鼠
-4. bird - 小鸟
-5. ...（继续其他宠物）
+| 等级 | 装饰 | 具体元素 | 设计理念 |
+|------|------|---------|---------|
+| Lv.1 | 日式小铃铛 | 红色铃铛 | 日本元素 |
+| Lv.2 | 樱花项圈 | 樱花装饰 | 日本国花 |
+| Lv.3 | 武士小头盔 | 日式头盔 | 武士文化 |
+| Lv.4 | 金色和服腰带 | 和服元素 | 传统服饰 |
+| Lv.5 | 日式皇冠+家纹 | 皇冠+家纹 | 贵族气质 |
+| Lv.6 | 天狗翅膀+面具 | 天狗元素 | 日本神话 |
+| Lv.7 | 大天狗翅膀+光环 | 大天狗 | 强大守护 |
+| Lv.8 | 神圣天狗+大翅膀+漂浮+樱花符号 | 神圣天狗 | 完全神圣化 |
+
+### 待设计品种
+
+按优先级设计：
+1. **bichon** - 比熊（白色卷毛，适合可爱装饰）
+2. **golden-retriever** - 金毛（温顺，适合温暖装饰）
+3. **corgi** - 柯基（短腿，皇室关联）
+4. **shiba** - 柴犬（日本元素）
+5. **husky** - 哈士奇（蓝眼，狼-like）
+6. **ragdoll** - 布偶（蓝眼，长毛）
+7. ...（继续其他品种）
 
 ---
 
@@ -125,13 +124,13 @@ different style, inconsistent design"
 
 ### 基础结构
 ```
-A cute [宠物主体描述], [等级装饰描述],
+A cute [品种主体描述], [等级装饰描述],
 [严格统一风格词],
 [背景描述],
 masterpiece, best quality, 8k
 ```
 
-### 风格词（所有宠物完全相同）
+### 风格词（所有品种完全相同）
 ```
 flat cartoon illustration, kawaii chibi style, consistent character design,
 cute friendly expression, big round sparkling eyes with white highlights,
@@ -140,25 +139,17 @@ bright saturated warm colors, soft shading, 2D vector art style,
 children book illustration style, standing pose, front facing
 ```
 
-### 负面词（所有宠物完全相同）
+### 负面词（所有品种完全相同）
 ```
 3D, realistic, photograph, scary, dark, complex background,
 busy background, text, watermark, signature, blurry, low quality,
-different style, inconsistent design, ugly, deformed
+different style, inconsistent design
 ```
 
-### 背景词（根据等级）
-| 等级 | 背景 |
-|------|------|
-| Lv.1-2 | simple soft gradient background, pastel colors |
-| Lv.3-4 | soft nature background with bokeh effect |
-| Lv.5-6 | golden light rays, soft glow background |
-| Lv.7-8 | divine golden light, ethereal glow, cosmic stars |
-
-### 完整Prompt示例
+### 完整Prompt示例（柯基 Lv.5）
 ```
-A cute fluffy orange and white cat with big round eyes and pink nose,
-wearing small golden crown with cat paw prints on head,
+A cute corgi with short legs, fluffy butt, big ears, orange and white fur,
+wearing small golden crown with royal cape,
 flat cartoon illustration, kawaii chibi style, consistent character design,
 cute friendly expression, big round sparkling eyes with white highlights,
 soft rounded shapes, smooth clean outlines, no sharp edges,
@@ -172,13 +163,12 @@ masterpiece, best quality, 8k
 
 ## 五、操作流程
 
-### 1. 设计宠物装饰
-- 为宠物设计8个等级的装饰
-- 记录在 `scripts/pet_designs/{pet_id}.json`
+### 1. 设计品种装饰
+为每个品种设计8个等级的装饰，记录在 `scripts/pet_designs/{品种id}.json`
 
 ### 2. 生成图片
 ```bash
-python scripts/generate_pets.py --pet [宠物名] --all
+python scripts/generate_pets.py --pet [品种id] --all
 ```
 
 ### 3. 画风检查
@@ -188,7 +178,7 @@ python scripts/generate_pets.py --pet [宠物名] --all
 
 ### 4. 装饰审核
 - 检查装饰是否清晰可见
-- 检查是否符合设计要求
+- 检查是否符合品种特性
 - 不通过则重新生成
 
 ### 5. 完成确认
@@ -209,8 +199,8 @@ python scripts/generate_pets.py --pet [宠物名] --all
 |------|------|------|
 | 画风不一致 | 风格词被修改 | 复制粘贴统一风格词 |
 | 太写实 | 缺少风格词 | 添加`flat cartoon illustration` |
-| 背景太复杂 | 背景描述过多 | 简化背景，使用`simple background` |
-| 眼睛不够大 | 缺少眼睛描述 | 添加`big round sparkling eyes` |
+| 品种特征不明显 | 描述不足 | 添加品种特征词（如`short legs` for corgi） |
+| 装饰不清晰 | 描述不够强调 | 添加`prominently displayed` |
 
 ---
 
@@ -221,17 +211,17 @@ scripts/
 ├── generate_pets.py       # 生成工具
 ├── strict_audit.py        # 严格审核
 ├── auto_regenerate.py     # 自动重生成
-├── pet_designs/           # 宠物装饰设计
-│   ├── cat.json
-│   ├── dog.json
+├── pet_designs/           # 品种装饰设计
+│   ├── corgi.json
+│   ├── shiba.json
 │   └── ...
 └── ...
 
 public/pets/
-├── cat/
+├── corgi/
 │   ├── lv1.png
 │   └── ...
-├── dog/
+├── shiba/
 │   └── ...
 └── ...
 ```
@@ -242,11 +232,11 @@ public/pets/
 
 | 项目 | 数量 | 单价 | 总价 |
 |------|------|------|------|
-| 宠物数量 | 按系统实际数量 | - | - |
+| 品种数量 | 25 | - | - |
 | 等级 | 8 | - | - |
 | 单张成本 | - | ¥0.03 | - |
-| 总计 | 宠物数 × 8 | ¥0.03 | 约¥0.24/宠物 |
+| 总计 | 25 × 8 = 200 | ¥0.03 | 约¥6 |
 
 ---
 
-**关键：严格使用统一的风格词，确保所有宠物画风一致！**
+**关键：严格使用统一的风格词，确保所有品种画风一致！**
