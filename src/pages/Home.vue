@@ -693,6 +693,15 @@ function getStudentPetImage(student: Student): string {
   return getPetLevelImage(student.pet_type, student.pet_level)
 }
 
+// 隐藏图片加载动画
+function hideLoading(event: Event) {
+  const target = event.target as HTMLImageElement
+  const loadingEl = target.previousElementSibling as HTMLElement
+  if (loadingEl) {
+    loadingEl.style.display = 'none'
+  }
+}
+
 // Initialize
 onMounted(async () => {
   isLoading.value = true
@@ -1246,10 +1255,10 @@ onMounted(async () => {
     <!-- 选择宠物模态框 -->
     <Transition name="modal">
       <div v-if="showPetModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-        <div class="bg-white rounded-3xl p-8 w-full max-w-2xl max-h-[85vh] overflow-auto shadow-2xl animate-scale-in">
-          <h3 class="text-xl font-bold mb-6 flex items-center gap-2">
-            <span class="text-2xl">🐾</span>
-            为 <span class="text-gradient">{{ selectedStudent?.name }}</span> 选择宠物伙伴
+        <div class="bg-white rounded-3xl p-6 w-full max-w-3xl max-h-[90vh] overflow-auto shadow-2xl animate-scale-in">
+          <h3 class="text-2xl font-bold mb-6 flex items-center gap-3">
+            <span class="text-3xl">🐾</span>
+            <span>为 <span class="text-gradient bg-gradient-to-r from-orange-500 to-pink-500 bg-clip-text text-transparent">{{ selectedStudent?.name }}</span> 选择宠物伙伴</span>
           </h3>
           
           <!-- 分类标签 -->
@@ -1275,24 +1284,48 @@ onMounted(async () => {
           </div>
 
           <!-- 宠物网格 -->
-          <div class="grid grid-cols-3 md:grid-cols-4 gap-4">
+          <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
             <button 
               v-for="pet in filteredPets" 
               :key="pet.id"
               @click="selectPet(pet.id)"
-              class="bg-gradient-to-br from-orange-50 to-pink-50 rounded-2xl p-4 hover:shadow-lg hover:scale-105 transition-all text-center group border-2 border-transparent hover:border-orange-200"
+              class="bg-gradient-to-br from-orange-50 via-pink-50 to-purple-50 rounded-2xl p-5 hover:shadow-xl hover:scale-105 transition-all text-center group border-2 border-transparent hover:border-orange-300 relative overflow-hidden"
             >
-              <img :src="getPetLevel1Image(pet.id)" class="w-16 h-16 mx-auto object-contain group-hover:scale-110 transition-transform" />
-              <div class="text-sm font-bold mt-2 text-gray-700 group-hover:text-orange-500 transition-colors">{{ pet.name }}</div>
+              <!-- 背景装饰 -->
+              <div class="absolute inset-0 bg-gradient-to-br from-orange-100/50 to-pink-100/50 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+              
+              <!-- 图片容器 -->
+              <div class="relative w-24 h-24 mx-auto mb-3">
+                <!-- 加载动画 -->
+                <div class="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-orange-100 to-pink-100 rounded-2xl">
+                  <div class="flex gap-1">
+                    <span class="w-2 h-2 bg-orange-400 rounded-full animate-bounce" style="animation-delay: 0ms"></span>
+                    <span class="w-2 h-2 bg-pink-400 rounded-full animate-bounce" style="animation-delay: 150ms"></span>
+                    <span class="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style="animation-delay: 300ms"></span>
+                  </div>
+                </div>
+                <!-- 宠物图片 -->
+                <img 
+                  :src="getPetLevel1Image(pet.id)" 
+                  class="absolute inset-0 w-full h-full object-contain group-hover:scale-110 transition-transform duration-300 rounded-2xl"
+                  @load="hideLoading($event)"
+                />
+              </div>
+              
+              <!-- 宠物名称 -->
+              <div class="text-base font-bold text-gray-700 group-hover:text-orange-500 transition-colors">{{ pet.name }}</div>
+              
+              <!-- 等级标签 -->
+              <div class="mt-1 text-xs text-gray-400">Lv.1</div>
             </button>
           </div>
 
-          <div class="mt-6 p-4 bg-gradient-to-r from-orange-50 to-pink-50 rounded-xl text-sm text-gray-600 text-center">
-            💡 点击宠物即可领养，宠物会陪伴学生一起成长！
+          <div class="mt-6 p-4 bg-gradient-to-r from-orange-50 via-pink-50 to-purple-50 rounded-xl text-sm text-gray-600 text-center border border-orange-100">
+            <span class="text-lg">💡</span> 点击宠物即可领养，宠物会陪伴学生一起成长！
           </div>
 
           <div class="flex justify-end mt-6">
-            <button @click="showPetModal = false" class="px-6 py-3 text-gray-500 hover:text-gray-700 font-medium transition-colors">取消</button>
+            <button @click="showPetModal = false" class="px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-xl font-medium transition-colors">取消</button>
           </div>
         </div>
       </div>
