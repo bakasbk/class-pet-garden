@@ -347,3 +347,37 @@ public/pets/
 - 优化Prompt模板
 - 生成dog测试跨宠物一致性
 - 确定最终参数后批量生成
+## 十一、测试进展
+
+### 2026-03-16 第二次测试（Prompt优化后）
+
+**优化内容**:
+- 添加详细的体型描述（head-to-body ratio从1:1到1:4.5）
+- 强化每个等级的特征描述
+- 增加表情变化描述
+- 优化负面提示词
+
+**Prompt对比**:
+
+**Lv.1（幼年期）**:
+```
+tiny body, smallest size, chibi proportions 1:1 head-to-body ratio,
+round baby face, oversized head, tiny limbs, fluffy baby fur,
+innocent curious eyes, small smile
+```
+
+**Lv.8（传说期）**:
+```
+massive body, divine proportions, 1:4.5 head-to-body ratio, largest size,
+god-like majestic build, ultimate form, divine radiance, floating above ground,
+divine all-knowing eyes, transcendent presence, benevolent smile
+```
+
+**新生成的图片**:
+- `public/pets/cat/lv1.png` - 优化后的幼年期
+- `public/pets/cat/lv8.png` - 优化后的传说期
+
+**待确认**:
+- 查看bridge预览页面中的对比效果
+- 确认形态变化是否明显
+- 决定是否继续生成其他等级
