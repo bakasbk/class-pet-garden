@@ -76,10 +76,10 @@ const randomEmoji = computed(() => loadingEmojis[Math.floor(Math.random() * load
         <div class="flex flex-col items-center gap-2">
           <span :class="[emojiSizeClass, 'animate-bounce']">{{ randomEmoji }}</span>
           <!-- 爪印轨迹 -->
-          <div class="flex gap-1">
-            <span class="w-1.5 h-1.5 bg-orange-300 rounded-full animate-pulse" style="animation-delay: 0ms"></span>
-            <span class="w-1.5 h-1.5 bg-pink-300 rounded-full animate-pulse" style="animation-delay: 150ms"></span>
-            <span class="w-1.5 h-1.5 bg-orange-300 rounded-full animate-pulse" style="animation-delay: 300ms"></span>
+          <div class="flex gap-1 text-xs">
+            <span class="animate-pulse" style="animation-delay: 0ms">🐾</span>
+            <span class="animate-pulse" style="animation-delay: 150ms">🐾</span>
+            <span class="animate-pulse" style="animation-delay: 300ms">🐾</span>
           </div>
         </div>
       </div>
