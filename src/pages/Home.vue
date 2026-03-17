@@ -1655,8 +1655,9 @@ onMounted(async () => {
           <div class="relative bg-gradient-to-r from-orange-400 via-pink-400 to-purple-400 p-6 rounded-t-3xl">
             <!-- 顶部操作按钮 -->
             <div class="absolute top-4 right-4 flex gap-2">
-              <button @click="showDetailPanel = false; openPetSelect(detailStudent!)" class="w-10 h-10 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center text-white text-sm transition-colors" title="换宠物">
-                🔄
+              <button @click="showDetailPanel = false; openPetSelect(detailStudent!)" class="px-3 py-2 bg-white/20 hover:bg-white/30 rounded-full flex items-center gap-1.5 text-white text-sm transition-colors" title="更换宠物">
+                <span>🐾</span>
+                <span class="font-medium">换宠物</span>
               </button>
               <button @click="closeDetailPanel" class="w-10 h-10 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center text-white text-xl transition-colors" title="关闭">
                 ×
