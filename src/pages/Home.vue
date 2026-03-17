@@ -1103,28 +1103,11 @@ onMounted(async () => {
             </div>
           </Transition>
         </div>
-        
-        <!-- Batch Mode Actions -->
-          <div v-if="showEvalMenu" @click="showEvalMenu = false" class="fixed inset-0 z-40"></div>
-          <Transition name="dropdown">
-            <div v-if="showEvalMenu" class="absolute right-0 top-full mt-1.5 bg-white rounded-xl shadow-xl border border-gray-100 py-1.5 w-40 z-50 overflow-hidden">
-              <button @click="startBatchMode" class="w-full text-left px-3 py-2 text-sm hover:bg-gradient-to-r hover:from-orange-50 hover:to-pink-50 transition-colors">✅ 批量</button>
-              <button @click="showRankModal = true" class="w-full text-left px-3 py-2 text-sm hover:bg-gradient-to-r hover:from-orange-50 hover:to-pink-50 transition-colors">🏆 排行</button>
-              <button @click="loadEvaluationRecords(); showRecordsModal = true" class="w-full text-left px-3 py-2 text-sm hover:bg-gradient-to-r hover:from-orange-50 hover:to-pink-50 transition-colors">📋 记录</button>
-              <hr class="my-1.5 border-gray-100">
-              <button @click="showRulesModal = true" class="w-full text-left px-3 py-2 text-sm hover:bg-gradient-to-r hover:from-orange-50 hover:to-pink-50 transition-colors">⚙️ 规则</button>
-            </div>
-          </Transition>
-        </div>
-        
-        <!-- Batch Mode Actions -->
-        <template v-if="batchMode">
-          <span class="text-sm text-white font-bold bg-white/20 px-3 py-1.5 rounded-lg">
-            {{ selectedStudents.size }}
-          </span>
-          <button @click="selectAllStudents" class="px-3 py-1.5 rounded-lg text-sm bg-blue-500 text-white hover:bg-blue-600 shadow-md transition-all font-medium">
-            全选
-          </button>
+      </div>
+    </header>
+    
+    <!-- Main Content -->
+    <main class="flex-1 overflow-auto p-6">
           <button @click="cancelBatchMode" class="px-3 py-1.5 rounded-lg text-sm bg-gray-500 text-white hover:bg-gray-600 shadow-md transition-all font-medium">
             取消
           </button>
