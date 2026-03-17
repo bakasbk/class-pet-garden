@@ -93,6 +93,29 @@ const confirmDialog = ref({
   onConfirm: () => {}
 })
 
+// 通用确认函数
+function showConfirm(options: {
+  title: string
+  message: string
+  confirmText?: string
+  cancelText?: string
+  type?: 'info' | 'warning' | 'danger'
+  onConfirm: () => void
+}) {
+  confirmDialog.value = {
+    show: true,
+    title: options.title,
+    message: options.message,
+    confirmText: options.confirmText || '确认',
+    cancelText: options.cancelText || '取消',
+    type: options.type || 'info',
+    onConfirm: () => {
+      options.onConfirm()
+      confirmDialog.value.show = false
+    }
+  }
+}
+
 // 图片加载状态（用于升级动画）
 const levelUpImagesLoaded = ref({ prev: false, current: false })
 const levelUpPhase = ref<'show-prev' | 'transition' | 'show-current'>('show-prev')
@@ -298,13 +321,22 @@ function openEditClassModal() {
 }
 
 async function deleteClass(id: string) {
-  if (!confirm('确定删除该班级？所有学生数据将一并删除！')) return
-  await api.delete(`/classes/${id}`)
-  if (currentClass.value?.id === id) {
-    currentClass.value = null
-    students.value = []
-  }
-  await loadClasses()
+  showConfirm({
+    title: '删除班级',
+    message: '确定删除该班级？所有学生数据将一并删除！',
+    confirmText: '删除',
+    cancelText: '取消',
+    type: 'danger',
+    onConfirm: async () => {
+      await api.delete(`/classes/${id}`)
+      if (currentClass.value?.id === id) {
+        currentClass.value = null
+        students.value = []
+      }
+      await loadClasses()
+      toast.success('班级删除成功！')
+    }
+  })
 }
 
 async function addStudent() {
@@ -472,21 +504,29 @@ function cancelDeleteMode() {
 
 async function batchDeleteStudents() {
   if (deleteStudentList.value.length === 0) return
-  if (!confirm(`确定删除 ${deleteStudentList.value.length} 名学生？此操作不可恢复！`)) return
   
-  let successCount = 0
-  for (const studentId of deleteStudentList.value) {
-    try {
-      await api.delete(`/students/${studentId}`)
-      successCount++
-    } catch (error) {
-      console.error('删除失败:', error)
+  showConfirm({
+    title: '删除学生',
+    message: `确定删除 ${deleteStudentList.value.length} 名学生？此操作不可恢复！`,
+    confirmText: '删除',
+    cancelText: '取消',
+    type: 'danger',
+    onConfirm: async () => {
+      let successCount = 0
+      for (const studentId of deleteStudentList.value) {
+        try {
+          await api.delete(`/students/${studentId}`)
+          successCount++
+        } catch (error) {
+          console.error('删除失败:', error)
+        }
+      }
+      
+      toast.success(`已删除 ${successCount} 名学生`)
+      cancelDeleteMode()
+      await loadStudents()
     }
-  }
-  
-  toast.success(`已删除 ${successCount} 名学生`)
-  cancelDeleteMode()
-  await loadStudents()
+  })
 }
 
 function selectAllStudents() {
@@ -673,27 +713,35 @@ function goToPage(page: number) {
 
 async function undoLastEvaluation(recordId?: string) {
   if (!currentClass.value) return
-  if (!confirm('确定要撤回这条评价吗？')) return
   
-  try {
-    let res
-    if (recordId) {
-      // 撤回指定记录
-      res = await api.delete(`/evaluations/${recordId}`)
-    } else {
-      // 撤回最新记录
-      res = await api.delete(`/evaluations/latest?classId=${currentClass.value.id}`)
+  showConfirm({
+    title: '撤回评价',
+    message: '确定要撤回这条评价吗？',
+    confirmText: '撤回',
+    cancelText: '取消',
+    type: 'warning',
+    onConfirm: async () => {
+      try {
+        let res
+        if (recordId) {
+          // 撤回指定记录
+          res = await api.delete(`/evaluations/${recordId}`)
+        } else {
+          // 撤回最新记录
+          res = await api.delete(`/evaluations/latest?classId=${currentClass.value!.id}`)
+        }
+        
+        if (res.data.success) {
+          toast.success(`已撤回：${res.data.undone.student_name} ${res.data.undone.points > 0 ? '+' : ''}${res.data.undone.points}分`)
+          await loadStudents()
+          await loadEvaluationRecords()
+        }
+      } catch (error) {
+        console.error('撤回失败:', error)
+        toast.error('撤回失败')
+      }
     }
-    
-    if (res.data.success) {
-      toast.success(`已撤回：${res.data.undone.student_name} ${res.data.undone.points > 0 ? '+' : ''}${res.data.undone.points}分`)
-      await loadStudents()
-      await loadEvaluationRecords()
-    }
-  } catch (error) {
-    console.error('撤回失败:', error)
-    toast.error('撤回失败')
-  }
+  })
 }
 
 async function addRule() {
@@ -718,14 +766,23 @@ async function addRule() {
 }
 
 async function deleteRule(id: string) {
-  if (!confirm('确定删除该规则？')) return
-  try {
-    await api.delete(`/rules/${id}`)
-    await loadRules()
-  } catch (error) {
-    console.error('删除失败:', error)
-    alert('删除失败')
-  }
+  showConfirm({
+    title: '删除规则',
+    message: '确定删除该规则？',
+    confirmText: '删除',
+    cancelText: '取消',
+    type: 'warning',
+    onConfirm: async () => {
+      try {
+        await api.delete(`/rules/${id}`)
+        await loadRules()
+        toast.success('删除成功！')
+      } catch (error) {
+        console.error('删除失败:', error)
+        toast.error('删除失败')
+      }
+    }
+  })
 }
 
 async function exportBackup() {
@@ -749,23 +806,29 @@ async function importBackup(event: Event) {
   const file = (event.target as HTMLInputElement).files?.[0]
   if (!file) return
   
-  if (!confirm('导入将覆盖现有数据，确定继续？')) {
-    (event.target as HTMLInputElement).value = ''
-    return
-  }
+  const fileInput = event.target as HTMLInputElement
   
-  try {
-    const text = await file.text()
-    const data = JSON.parse(text)
-    await api.post('/restore', data)
-    alert('数据恢复成功！')
-    await loadClasses()
-    await loadRules()
-  } catch (error) {
-    console.error('导入失败:', error)
-    alert('导入失败，请确保文件格式正确')
-  }
-  (event.target as HTMLInputElement).value = ''
+  showConfirm({
+    title: '导入备份',
+    message: '导入将覆盖现有数据，确定继续？',
+    confirmText: '导入',
+    cancelText: '取消',
+    type: 'warning',
+    onConfirm: async () => {
+      try {
+        const text = await file.text()
+        const data = JSON.parse(text)
+        await api.post('/restore', data)
+        toast.success('数据恢复成功！')
+        await loadClasses()
+        await loadRules()
+      } catch (error) {
+        console.error('导入失败:', error)
+        toast.error('导入失败，请确保文件格式正确')
+      }
+      fileInput.value = ''
+    }
+  })
 }
 
 function getStudentPetImage(student: Student): string {
@@ -1147,12 +1210,11 @@ onMounted(async () => {
               <!-- 成长值 + 积分 -->
               <div class="flex items-center justify-between text-sm mb-3">
                 <span class="text-gray-500 flex items-center gap-1">
-                  <span class="text-purple-400">💜</span>
                   <template v-if="getLevelProgress(student.pet_exp).isMaxLevel">
-                    <span class="font-medium text-purple-600">{{ getLevelProgress(student.pet_exp).current }}</span>
                     <span class="text-xs text-amber-500 font-medium">🏆 已毕业</span>
                   </template>
                   <template v-else>
+                    <span class="text-purple-400">💜</span>
                     <span class="font-medium text-purple-600">{{ getLevelProgress(student.pet_exp).current }}</span>
                     <span class="text-gray-300">/</span>
                     <span>{{ getLevelProgress(student.pet_exp).required }}</span>
@@ -1715,7 +1777,6 @@ onMounted(async () => {
               <div class="flex justify-between text-white/90 text-sm mb-1">
                 <span>成长值</span>
                 <span v-if="getLevelProgress(detailStudent.pet_exp).isMaxLevel" class="flex items-center gap-1">
-                  <span>{{ getLevelProgress(detailStudent.pet_exp).current }}</span>
                   <span class="text-yellow-300 font-medium">🏆 已毕业，获得专属徽章</span>
                 </span>
                 <span v-else>
