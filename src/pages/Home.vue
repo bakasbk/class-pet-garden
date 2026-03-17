@@ -4,7 +4,9 @@ import axios from 'axios'
 import { PET_TYPES, getPetType, getLevelProgress, calculateLevel, getPetLevelImage, getPetLevel1Image } from '@/data/pets'
 import PetImage from '@/components/PetImage.vue'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
+import AuthModal from '@/components/AuthModal.vue'
 import { useToast } from '@/composables/useToast'
+import { useAuth } from '@/composables/useAuth'
 
 // 配置 axios baseURL
 const api = axios.create({
@@ -31,6 +33,13 @@ interface Student {
 
 // Toast 提示
 const toast = useToast()
+
+// 用户认证
+const { user, isLoggedIn, isGuest, username, logout, api } = useAuth()
+const showAuthModal = ref(false)
+
+// 用户菜单
+const showUserMenu = ref(false)
 
 interface Rule {
   id: string
@@ -1063,6 +1072,51 @@ onMounted(async () => {
           </Transition>
         </div>
         
+        <!-- User Menu -->
+        <div class="relative">
+          <button @click="showUserMenu = !showUserMenu" class="px-3 py-1.5 rounded-lg text-sm bg-white/95 hover:bg-white shadow-md transition-all font-medium flex items-center gap-1">
+            <span v-if="isGuest">👤</span>
+            <span v-else class="w-5 h-5 rounded-full bg-gradient-to-r from-orange-400 to-pink-500 flex items-center justify-center text-white text-xs font-bold">
+              {{ username.charAt(0).toUpperCase() }}
+            </span>
+            {{ username }} ▾
+          </button>
+          <div v-if="showUserMenu" @click="showUserMenu = false" class="fixed inset-0 z-40"></div>
+          <Transition name="dropdown">
+            <div v-if="showUserMenu" class="absolute right-0 top-full mt-1.5 bg-white rounded-xl shadow-xl border border-gray-100 py-1.5 w-44 z-50 overflow-hidden">
+              <div v-if="isGuest" class="px-3 py-2 text-sm text-gray-500 border-b border-gray-100">
+                当前为游客模式
+              </div>
+              <div v-else class="px-3 py-2 text-sm text-gray-500 border-b border-gray-100">
+                已登录: {{ username }}
+              </div>
+              <template v-if="isGuest">
+                <button @click="showAuthModal = true; showUserMenu = false" class="w-full text-left px-3 py-2 text-sm hover:bg-gradient-to-r hover:from-orange-50 hover:to-pink-50 transition-colors">
+                  🔑 登录 / 注册
+                </button>
+              </template>
+              <template v-else>
+                <button @click="logout(); showUserMenu = false; toast.success('已退出登录')" class="w-full text-left px-3 py-2 text-sm text-red-500 hover:bg-red-50 transition-colors">
+                  🚪 退出登录
+                </button>
+              </template>
+            </div>
+          </Transition>
+        </div>
+        
+        <!-- Batch Mode Actions -->
+          <div v-if="showEvalMenu" @click="showEvalMenu = false" class="fixed inset-0 z-40"></div>
+          <Transition name="dropdown">
+            <div v-if="showEvalMenu" class="absolute right-0 top-full mt-1.5 bg-white rounded-xl shadow-xl border border-gray-100 py-1.5 w-40 z-50 overflow-hidden">
+              <button @click="startBatchMode" class="w-full text-left px-3 py-2 text-sm hover:bg-gradient-to-r hover:from-orange-50 hover:to-pink-50 transition-colors">✅ 批量</button>
+              <button @click="showRankModal = true" class="w-full text-left px-3 py-2 text-sm hover:bg-gradient-to-r hover:from-orange-50 hover:to-pink-50 transition-colors">🏆 排行</button>
+              <button @click="loadEvaluationRecords(); showRecordsModal = true" class="w-full text-left px-3 py-2 text-sm hover:bg-gradient-to-r hover:from-orange-50 hover:to-pink-50 transition-colors">📋 记录</button>
+              <hr class="my-1.5 border-gray-100">
+              <button @click="showRulesModal = true" class="w-full text-left px-3 py-2 text-sm hover:bg-gradient-to-r hover:from-orange-50 hover:to-pink-50 transition-colors">⚙️ 规则</button>
+            </div>
+          </Transition>
+        </div>
+        
         <!-- Batch Mode Actions -->
         <template v-if="batchMode">
           <span class="text-sm text-white font-bold bg-white/20 px-3 py-1.5 rounded-lg">
@@ -1882,6 +1936,13 @@ onMounted(async () => {
       :type="confirmDialog.type"
       @confirm="confirmDialog.onConfirm"
       @cancel="confirmDialog.show = false"
+    />
+    
+    <!-- 登录/注册模态框 -->
+    <AuthModal
+      :show="showAuthModal"
+      @close="showAuthModal = false"
+      @login="(user) => { toast.success(`欢迎，${user.username}！`) }"
     />
   </div>
 </template>
