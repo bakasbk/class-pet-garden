@@ -73,6 +73,7 @@ const totalRecords = ref(0)
 const sortBy = ref<'name' | 'studentNo' | 'progress'>('name')
 const sortOrder = ref<'asc' | 'desc'>('asc')
 const showSortMenu = ref(false)
+const showPetMenu = ref(false)
 
 // 动画状态
 const showLevelUpAnimation = ref(false)
@@ -853,11 +854,6 @@ onMounted(async () => {
       
       <!-- Right -->
       <div class="flex items-center gap-2">
-        <!-- Pet Preview -->
-        <router-link to="/preview" class="px-4 py-2 rounded-xl text-sm bg-white/95 hover:bg-white shadow-md transition-all font-medium flex items-center gap-1">
-          🐾 宠物图鉴
-        </router-link>
-        
         <!-- Search -->
         <input 
           v-model="searchQuery"
@@ -865,6 +861,21 @@ onMounted(async () => {
           placeholder="🔍 搜索学生..."
           class="border-0 rounded-xl px-4 py-2 text-sm w-36 bg-white/95 hover:bg-white shadow-md focus:outline-none focus:ring-2 focus:ring-white/50 transition-all"
         />
+        
+        <!-- Pet Menu -->
+        <div class="relative" v-if="!batchMode">
+          <button @click="showPetMenu = !showPetMenu" class="px-4 py-2 rounded-xl text-sm bg-white/95 hover:bg-white shadow-md transition-all font-medium">
+            🐾 宠物 ▾
+          </button>
+          <div v-if="showPetMenu" @click="showPetMenu = false" class="fixed inset-0 z-40"></div>
+          <Transition name="dropdown">
+            <div v-if="showPetMenu" class="absolute right-0 top-full mt-2 bg-white rounded-xl shadow-xl border border-gray-100 py-2 w-44 z-50 overflow-hidden">
+              <router-link to="/preview" class="w-full text-left px-4 py-2.5 text-sm hover:bg-gradient-to-r hover:from-orange-50 hover:to-pink-50 transition-colors flex items-center gap-2">
+                📖 宠物图鉴
+              </router-link>
+            </div>
+          </Transition>
+        </div>
         
         <!-- Sort Menu -->
         <div class="relative" v-if="!batchMode">
