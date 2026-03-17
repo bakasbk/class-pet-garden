@@ -100,14 +100,7 @@ const scoreAnimations = ref<Map<string, { points: number, show: boolean }>>(new 
 // 学生评价记录
 const studentRecords = ref<any[]>([])
 
-const sortLabel = computed(() => {
-  switch (sortBy.value) {
-    case 'name': return '姓名'
-    case 'studentNo': return '学号'
-    case 'progress': return '养成'
-    default: return '排序'
-  }
-})
+
 
 function toggleSortMenu() {
   showSortMenu.value = !showSortMenu.value
@@ -850,25 +843,25 @@ onMounted(async () => {
       </div>
       
       <!-- Right -->
-      <div class="flex items-center gap-2">
+      <div class="flex items-center gap-1.5">
         <!-- Search -->
         <input 
           v-model="searchQuery"
           type="text" 
-          placeholder="🔍 搜索学生..."
-          class="border-0 rounded-xl px-4 py-2 text-sm w-36 bg-white/95 hover:bg-white shadow-md focus:outline-none focus:ring-2 focus:ring-white/50 transition-all"
+          placeholder="🔍 搜索..."
+          class="border-0 rounded-lg px-3 py-1.5 text-sm w-28 bg-white/95 hover:bg-white shadow-md focus:outline-none focus:ring-2 focus:ring-white/50 transition-all"
         />
         
         <!-- Pet Menu -->
         <div class="relative" v-if="!batchMode">
-          <button @click="showPetMenu = !showPetMenu" class="px-4 py-2 rounded-xl text-sm bg-white/95 hover:bg-white shadow-md transition-all font-medium">
-            🐾 宠物 ▾
+          <button @click="showPetMenu = !showPetMenu" class="px-3 py-1.5 rounded-lg text-sm bg-white/95 hover:bg-white shadow-md transition-all font-medium">
+            🐾 ▾
           </button>
           <div v-if="showPetMenu" @click="showPetMenu = false" class="fixed inset-0 z-40"></div>
           <Transition name="dropdown">
-            <div v-if="showPetMenu" class="absolute right-0 top-full mt-2 bg-white rounded-xl shadow-xl border border-gray-100 py-2 w-44 z-50 overflow-hidden">
-              <router-link to="/preview" class="w-full text-left px-4 py-2.5 text-sm hover:bg-gradient-to-r hover:from-orange-50 hover:to-pink-50 transition-colors flex items-center gap-2">
-                📖 宠物图鉴
+            <div v-if="showPetMenu" class="absolute right-0 top-full mt-1.5 bg-white rounded-xl shadow-xl border border-gray-100 py-1.5 w-40 z-50 overflow-hidden">
+              <router-link to="/preview" class="w-full text-left px-3 py-2 text-sm hover:bg-gradient-to-r hover:from-orange-50 hover:to-pink-50 transition-colors flex items-center gap-2">
+                📖 图鉴
               </router-link>
             </div>
           </Transition>
@@ -876,34 +869,34 @@ onMounted(async () => {
         
         <!-- Sort Menu -->
         <div class="relative" v-if="!batchMode">
-          <button @click="toggleSortMenu" class="px-4 py-2 rounded-xl text-sm bg-white/95 hover:bg-white shadow-md transition-all font-medium">
-            📊 {{ sortLabel }} {{ sortOrder === 'asc' ? '▲' : '▼' }}
+          <button @click="toggleSortMenu" class="px-3 py-1.5 rounded-lg text-sm bg-white/95 hover:bg-white shadow-md transition-all font-medium">
+            📊 {{ sortOrder === 'asc' ? '▲' : '▼' }}
           </button>
           <div v-if="showSortMenu" @click="showSortMenu = false" class="fixed inset-0 z-40"></div>
           <Transition name="dropdown">
-            <div v-if="showSortMenu" class="absolute right-0 top-full mt-2 bg-white rounded-xl shadow-xl border border-gray-100 py-2 w-44 z-50 overflow-hidden">
-              <button @click="setSort('name', 'asc')" class="w-full text-left px-4 py-2.5 text-sm hover:bg-gradient-to-r hover:from-orange-50 hover:to-pink-50 transition-colors" :class="sortBy === 'name' && sortOrder === 'asc' ? 'bg-gradient-to-r from-orange-50 to-pink-50 text-orange-600 font-medium' : ''">🔤 姓名 A-Z</button>
-              <button @click="setSort('name', 'desc')" class="w-full text-left px-4 py-2.5 text-sm hover:bg-gradient-to-r hover:from-orange-50 hover:to-pink-50 transition-colors" :class="sortBy === 'name' && sortOrder === 'desc' ? 'bg-gradient-to-r from-orange-50 to-pink-50 text-orange-600 font-medium' : ''">🔤 姓名 Z-A</button>
-              <button @click="setSort('studentNo', 'asc')" class="w-full text-left px-4 py-2.5 text-sm hover:bg-gradient-to-r hover:from-orange-50 hover:to-pink-50 transition-colors" :class="sortBy === 'studentNo' ? 'bg-gradient-to-r from-orange-50 to-pink-50 text-orange-600 font-medium' : ''">🔢 学号排序</button>
-              <button @click="setSort('progress', 'desc')" class="w-full text-left px-4 py-2.5 text-sm hover:bg-gradient-to-r hover:from-orange-50 hover:to-pink-50 transition-colors" :class="sortBy === 'progress' ? 'bg-gradient-to-r from-orange-50 to-pink-50 text-orange-600 font-medium' : ''">⭐ 养成进度</button>
+            <div v-if="showSortMenu" class="absolute right-0 top-full mt-1.5 bg-white rounded-xl shadow-xl border border-gray-100 py-1.5 w-40 z-50 overflow-hidden">
+              <button @click="setSort('name', 'asc')" class="w-full text-left px-3 py-2 text-sm hover:bg-gradient-to-r hover:from-orange-50 hover:to-pink-50 transition-colors" :class="sortBy === 'name' && sortOrder === 'asc' ? 'bg-gradient-to-r from-orange-50 to-pink-50 text-orange-600 font-medium' : ''">🔤 A-Z</button>
+              <button @click="setSort('name', 'desc')" class="w-full text-left px-3 py-2 text-sm hover:bg-gradient-to-r hover:from-orange-50 hover:to-pink-50 transition-colors" :class="sortBy === 'name' && sortOrder === 'desc' ? 'bg-gradient-to-r from-orange-50 to-pink-50 text-orange-600 font-medium' : ''">🔤 Z-A</button>
+              <button @click="setSort('studentNo', 'asc')" class="w-full text-left px-3 py-2 text-sm hover:bg-gradient-to-r hover:from-orange-50 hover:to-pink-50 transition-colors" :class="sortBy === 'studentNo' ? 'bg-gradient-to-r from-orange-50 to-pink-50 text-orange-600 font-medium' : ''">🔢 学号</button>
+              <button @click="setSort('progress', 'desc')" class="w-full text-left px-3 py-2 text-sm hover:bg-gradient-to-r hover:from-orange-50 hover:to-pink-50 transition-colors" :class="sortBy === 'progress' ? 'bg-gradient-to-r from-orange-50 to-pink-50 text-orange-600 font-medium' : ''">⭐ 进度</button>
             </div>
           </Transition>
         </div>
         
         <!-- Class Menu -->
         <div class="relative" v-if="!batchMode">
-          <button @click="showClassMenu = !showClassMenu" class="px-4 py-2 rounded-xl text-sm bg-white/95 hover:bg-white shadow-md transition-all font-medium">
-            📚 班级 ▾
+          <button @click="showClassMenu = !showClassMenu" class="px-3 py-1.5 rounded-lg text-sm bg-white/95 hover:bg-white shadow-md transition-all font-medium">
+            📚 ▾
           </button>
           <div v-if="showClassMenu" @click="showClassMenu = false" class="fixed inset-0 z-40"></div>
           <Transition name="dropdown">
-            <div v-if="showClassMenu" class="absolute right-0 top-full mt-2 bg-white rounded-xl shadow-xl border border-gray-100 py-2 w-44 z-50 overflow-hidden">
-              <button @click="showClassModal = true" class="w-full text-left px-4 py-2.5 text-sm hover:bg-gradient-to-r hover:from-orange-50 hover:to-pink-50 transition-colors">➕ 新建班级</button>
-              <button v-if="currentClass" @click="deleteClass(currentClass.id)" class="w-full text-left px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 transition-colors">🗑️ 删除班级</button>
-              <hr class="my-2 border-gray-100">
-              <button @click="exportBackup" class="w-full text-left px-4 py-2.5 text-sm hover:bg-gradient-to-r hover:from-orange-50 hover:to-pink-50 transition-colors">💾 导出备份</button>
-              <label class="w-full text-left px-4 py-2.5 text-sm hover:bg-gradient-to-r hover:from-orange-50 hover:to-pink-50 transition-colors cursor-pointer block">
-                📥 导入恢复
+            <div v-if="showClassMenu" class="absolute right-0 top-full mt-1.5 bg-white rounded-xl shadow-xl border border-gray-100 py-1.5 w-40 z-50 overflow-hidden">
+              <button @click="showClassModal = true" class="w-full text-left px-3 py-2 text-sm hover:bg-gradient-to-r hover:from-orange-50 hover:to-pink-50 transition-colors">➕ 新建</button>
+              <button v-if="currentClass" @click="deleteClass(currentClass.id)" class="w-full text-left px-3 py-2 text-sm text-red-500 hover:bg-red-50 transition-colors">🗑️ 删除</button>
+              <hr class="my-1.5 border-gray-100">
+              <button @click="exportBackup" class="w-full text-left px-3 py-2 text-sm hover:bg-gradient-to-r hover:from-orange-50 hover:to-pink-50 transition-colors">💾 导出</button>
+              <label class="w-full text-left px-3 py-2 text-sm hover:bg-gradient-to-r hover:from-orange-50 hover:to-pink-50 transition-colors cursor-pointer block">
+                📥 导入
                 <input type="file" accept=".json" @change="importBackup" class="hidden" />
               </label>
             </div>
@@ -912,46 +905,45 @@ onMounted(async () => {
         
         <!-- Student Menu -->
         <div class="relative" v-if="currentClass && !batchMode">
-          <button @click="showStudentMenu = !showStudentMenu" class="px-4 py-2 rounded-xl text-sm bg-white/95 hover:bg-white shadow-md transition-all font-medium">
-            👨‍🎓 学生 ▾
+          <button @click="showStudentMenu = !showStudentMenu" class="px-3 py-1.5 rounded-lg text-sm bg-white/95 hover:bg-white shadow-md transition-all font-medium">
+            👤 ▾
           </button>
           <div v-if="showStudentMenu" @click="showStudentMenu = false" class="fixed inset-0 z-40"></div>
           <Transition name="dropdown">
-            <div v-if="showStudentMenu" class="absolute right-0 top-full mt-2 bg-white rounded-xl shadow-xl border border-gray-100 py-2 w-44 z-50 overflow-hidden">
-              <button @click="showStudentModal = true" class="w-full text-left px-4 py-2.5 text-sm hover:bg-gradient-to-r hover:from-orange-50 hover:to-pink-50 transition-colors">➕ 添加学生</button>
-              <button @click="openImportModal" class="w-full text-left px-4 py-2.5 text-sm hover:bg-gradient-to-r hover:from-orange-50 hover:to-pink-50 transition-colors">📥 批量导入</button>
-              <button @click="showDeleteStudentMode = true; deleteStudentList = []" class="w-full text-left px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 transition-colors">🗑️ 删除学生</button>
+            <div v-if="showStudentMenu" class="absolute right-0 top-full mt-1.5 bg-white rounded-xl shadow-xl border border-gray-100 py-1.5 w-40 z-50 overflow-hidden">
+              <button @click="showStudentModal = true" class="w-full text-left px-3 py-2 text-sm hover:bg-gradient-to-r hover:from-orange-50 hover:to-pink-50 transition-colors">➕ 添加</button>
+              <button @click="openImportModal" class="w-full text-left px-3 py-2 text-sm hover:bg-gradient-to-r hover:from-orange-50 hover:to-pink-50 transition-colors">📥 导入</button>
+              <button @click="showDeleteStudentMode = true; deleteStudentList = []" class="w-full text-left px-3 py-2 text-sm text-red-500 hover:bg-red-50 transition-colors">🗑️ 删除</button>
             </div>
           </Transition>
         </div>
         
         <!-- Eval Menu -->
         <div class="relative" v-if="!batchMode">
-          <button @click="showEvalMenu = !showEvalMenu" class="px-4 py-2 rounded-xl text-sm bg-white/95 hover:bg-white shadow-md transition-all font-medium">
-            ⭐ 评价 ▾
+          <button @click="showEvalMenu = !showEvalMenu" class="px-3 py-1.5 rounded-lg text-sm bg-white/95 hover:bg-white shadow-md transition-all font-medium">
+            ⭐ ▾
           </button>
           <div v-if="showEvalMenu" @click="showEvalMenu = false" class="fixed inset-0 z-40"></div>
           <Transition name="dropdown">
-            <div v-if="showEvalMenu" class="absolute right-0 top-full mt-2 bg-white rounded-xl shadow-xl border border-gray-100 py-2 w-44 z-50 overflow-hidden">
-              <button @click="startBatchMode" class="w-full text-left px-4 py-2.5 text-sm hover:bg-gradient-to-r hover:from-orange-50 hover:to-pink-50 transition-colors">✅ 批量评价</button>
-              <button @click="showRankModal = true" class="w-full text-left px-4 py-2.5 text-sm hover:bg-gradient-to-r hover:from-orange-50 hover:to-pink-50 transition-colors">🏆 排行榜</button>
-              <button @click="loadEvaluationRecords(); showRecordsModal = true" class="w-full text-left px-4 py-2.5 text-sm hover:bg-gradient-to-r hover:from-orange-50 hover:to-pink-50 transition-colors">📋 评价记录</button>
-              <hr class="my-2 border-gray-100">
-              <hr class="my-2 border-gray-100">
-              <button @click="showRulesModal = true" class="w-full text-left px-4 py-2.5 text-sm hover:bg-gradient-to-r hover:from-orange-50 hover:to-pink-50 transition-colors">⚙️ 管理规则</button>
+            <div v-if="showEvalMenu" class="absolute right-0 top-full mt-1.5 bg-white rounded-xl shadow-xl border border-gray-100 py-1.5 w-40 z-50 overflow-hidden">
+              <button @click="startBatchMode" class="w-full text-left px-3 py-2 text-sm hover:bg-gradient-to-r hover:from-orange-50 hover:to-pink-50 transition-colors">✅ 批量</button>
+              <button @click="showRankModal = true" class="w-full text-left px-3 py-2 text-sm hover:bg-gradient-to-r hover:from-orange-50 hover:to-pink-50 transition-colors">🏆 排行</button>
+              <button @click="loadEvaluationRecords(); showRecordsModal = true" class="w-full text-left px-3 py-2 text-sm hover:bg-gradient-to-r hover:from-orange-50 hover:to-pink-50 transition-colors">📋 记录</button>
+              <hr class="my-1.5 border-gray-100">
+              <button @click="showRulesModal = true" class="w-full text-left px-3 py-2 text-sm hover:bg-gradient-to-r hover:from-orange-50 hover:to-pink-50 transition-colors">⚙️ 规则</button>
             </div>
           </Transition>
         </div>
         
         <!-- Batch Mode Actions -->
         <template v-if="batchMode">
-          <span class="text-sm text-white font-bold bg-white/20 px-4 py-2 rounded-full">
-            已选 {{ selectedStudents.size }} 人
+          <span class="text-sm text-white font-bold bg-white/20 px-3 py-1.5 rounded-lg">
+            {{ selectedStudents.size }}
           </span>
-          <button @click="selectAllStudents" class="px-4 py-2 rounded-xl text-sm bg-blue-500 text-white hover:bg-blue-600 shadow-md transition-all font-medium">
+          <button @click="selectAllStudents" class="px-3 py-1.5 rounded-lg text-sm bg-blue-500 text-white hover:bg-blue-600 shadow-md transition-all font-medium">
             全选
           </button>
-          <button @click="cancelBatchMode" class="px-4 py-2 rounded-xl text-sm bg-gray-500 text-white hover:bg-gray-600 shadow-md transition-all font-medium">
+          <button @click="cancelBatchMode" class="px-3 py-1.5 rounded-lg text-sm bg-gray-500 text-white hover:bg-gray-600 shadow-md transition-all font-medium">
             取消
           </button>
         </template>
