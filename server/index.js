@@ -39,9 +39,19 @@ const db = new Database(dbPath)
 
 // Create tables
 db.exec(`
+  -- 用户表
+  CREATE TABLE IF NOT EXISTS users (
+    id TEXT PRIMARY KEY,
+    username TEXT UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
+    is_guest INTEGER DEFAULT 0,
+    created_at INTEGER
+  );
+
   -- 班级表
   CREATE TABLE IF NOT EXISTS classes (
     id TEXT PRIMARY KEY,
+    user_id TEXT,
     name TEXT NOT NULL,
     created_at INTEGER,
     updated_at INTEGER
@@ -120,6 +130,25 @@ db.exec(`
     value TEXT
   );
 `)
+
+// 创建默认游客用户
+const guestUser = db.prepare('SELECT id FROM users WHERE username = ?').get('guest')
+if (!guestUser) {
+  const guestId = uuidv4()
+  db.prepare('INSERT INTO users (id, username, password_hash, is_guest, created_at) VALUES (?, ?, ?, ?, ?)')
+    .run(guestId, 'guest', '', 1, Date.now())
+  console.log('✅ 创建默认游客用户')
+}
+
+// 迁移现有班级到游客用户
+const classesWithoutUser = db.prepare('SELECT id FROM classes WHERE user_id IS NULL').all()
+if (classesWithoutUser.length > 0) {
+  const guest = db.prepare('SELECT id FROM users WHERE username = ?').get('guest')
+  if (guest) {
+    db.prepare('UPDATE classes SET user_id = ? WHERE user_id IS NULL').run(guest.id)
+    console.log(`✅ 迁移 ${classesWithoutUser.length} 个班级到游客用户`)
+  }
+}
 
 // Initialize default rules if not exists
 const rulesCount = db.prepare('SELECT COUNT(*) as count FROM evaluation_rules').get()
