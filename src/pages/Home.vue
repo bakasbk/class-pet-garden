@@ -3,6 +3,7 @@ import { ref, onMounted, computed, nextTick } from 'vue'
 import axios from 'axios'
 import { PET_TYPES, getPetType, getLevelProgress, calculateLevel, getPetLevelImage, getPetLevel1Image } from '@/data/pets'
 import PetImage from '@/components/PetImage.vue'
+import { useToast } from '@/composables/useToast'
 
 // 配置 axios baseURL
 const api = axios.create({
@@ -26,6 +27,9 @@ interface Student {
   pet_level: number
   pet_exp: number
 }
+
+// Toast 提示
+const toast = useToast()
 
 interface Rule {
   id: string
@@ -229,7 +233,7 @@ async function loadRules() {
 
 async function createClass() {
   if (!newClassName.value.trim()) {
-    alert('请输入班级名称')
+    toast.warning('请输入班级名称')
     return
   }
   try {
@@ -237,15 +241,16 @@ async function createClass() {
     newClassName.value = ''
     showClassModal.value = false
     await loadClasses()
+    toast.success('班级创建成功！')
   } catch (error) {
     console.error('创建班级失败:', error)
-    alert('创建班级失败，请重试')
+    toast.error('创建班级失败，请重试')
   }
 }
 
 async function updateClass() {
   if (!newClassName.value.trim()) {
-    alert('请输入班级名称')
+    toast.warning('请输入班级名称')
     return
   }
   const classToEdit = editingClass.value
@@ -263,7 +268,7 @@ async function updateClass() {
     await loadClasses()
   } catch (error) {
     console.error('更新班级失败:', error)
-    alert('更新班级失败，请重试')
+    toast.error('更新班级失败，请重试')
   }
 }
 
@@ -304,7 +309,7 @@ async function addStudent() {
     await loadStudents()
   } catch (error) {
     console.error('添加学生失败:', error)
-    alert('添加学生失败，请重试')
+    toast.error('添加学生失败，请重试')
   }
 }
 
@@ -332,7 +337,7 @@ async function importStudents() {
   }
   
   if (students.length === 0) {
-    alert('没有识别到学生信息')
+    toast.warning('没有识别到学生信息')
     return
   }
   
@@ -341,13 +346,13 @@ async function importStudents() {
       classId: currentClass.value.id,
       students
     })
-    alert(`成功导入 ${res.data.imported} 名学生`)
+    toast.success(`成功导入 ${res.data.imported} 名学生`)
     showImportModal.value = false
     importText.value = ''
     await loadStudents()
   } catch (error) {
     console.error('导入失败:', error)
-    alert('导入失败，请重试')
+    toast.error('导入失败，请重试')
   }
 }
 
@@ -361,7 +366,7 @@ async function selectPet(petId: string) {
   try {
     await api.put(`/students/${selectedStudent.value.id}/pet`, { petType: petId })
     const pet = getPetType(petId)
-    alert(`🎉 ${selectedStudent.value.name} 领养了一只 ${pet?.name || '宠物'}！`)
+    toast.success(`🎉 ${selectedStudent.value.name} 领养了一只 ${pet?.name || '宠物'}！`)
     showPetModal.value = false
     selectedStudent.value = null
     await loadStudents()
@@ -371,7 +376,7 @@ async function selectPet(petId: string) {
     }
   } catch (error) {
     console.error('领养宠物失败:', error)
-    alert('领养失败，请重试')
+    toast.error('领养失败，请重试')
   }
 }
 
@@ -458,7 +463,7 @@ async function batchDeleteStudents() {
     }
   }
   
-  alert(`已删除 ${successCount} 名学生`)
+  toast.success(`已删除 ${successCount} 名学生`)
   cancelDeleteMode()
   await loadStudents()
 }
@@ -528,7 +533,7 @@ async function detailQuickAdd(rule: Rule) {
       setTimeout(() => { showLevelUpAnimation.value = false }, 4000)
     }
     if (res.data.graduated) {
-      alert(`🎓 恭喜！${student.name} 的宠物毕业了，获得了专属徽章！`)
+      toast.success(`🎓 恭喜！${student.name} 的宠物毕业了，获得了专属徽章！`)
     }
     
     await loadStudents()
@@ -537,7 +542,7 @@ async function detailQuickAdd(rule: Rule) {
     closeDetailPanel()
   } catch (error) {
     console.error('评价失败:', error)
-    alert('评价失败，请重试')
+    toast.error('评价失败，请重试')
   }
 }
 
@@ -564,7 +569,7 @@ async function quickAdd(student: Student | null, rule: Rule) {
     }
     
     showAddModal.value = false
-    alert(`已为 ${successCount} 名学生${rule.points > 0 ? '加' : '扣'}${Math.abs(rule.points)}分`)
+    toast.success(`已为 ${successCount} 名学生${rule.points > 0 ? '加' : '扣'}${Math.abs(rule.points)}分`)
     cancelBatchMode()
     await loadStudents()
     return
@@ -599,13 +604,13 @@ async function quickAdd(student: Student | null, rule: Rule) {
       setTimeout(() => { showLevelUpAnimation.value = false }, 4000)
     }
     if (res.data.graduated) {
-      alert(`🎓 恭喜！${student.name} 的宠物毕业了，获得了专属徽章！`)
+      toast.success(`🎓 恭喜！${student.name} 的宠物毕业了，获得了专属徽章！`)
     }
     
     await loadStudents()
   } catch (error) {
     console.error('评价失败:', error)
-    alert('评价失败，请重试')
+    toast.error('评价失败，请重试')
   }
 }
 
@@ -660,19 +665,19 @@ async function undoLastEvaluation(recordId?: string) {
     }
     
     if (res.data.success) {
-      alert(`已撤回：${res.data.undone.student_name} ${res.data.undone.points > 0 ? '+' : ''}${res.data.undone.points}分`)
+      toast.success(`已撤回：${res.data.undone.student_name} ${res.data.undone.points > 0 ? '+' : ''}${res.data.undone.points}分`)
       await loadStudents()
       await loadEvaluationRecords()
     }
   } catch (error) {
     console.error('撤回失败:', error)
-    alert('撤回失败')
+    toast.error('撤回失败')
   }
 }
 
 async function addRule() {
   if (!newRuleName.value.trim()) {
-    alert('请输入规则名称')
+    toast.warning('请输入规则名称')
     return
   }
   try {
@@ -683,7 +688,7 @@ async function addRule() {
     })
     newRuleName.value = ''
     newRulePoints.value = 1
-    alert('添加成功！')
+    toast.success('添加成功！')
     await loadRules()
   } catch (error) {
     console.error('添加规则失败:', error)
@@ -1124,7 +1129,7 @@ onMounted(async () => {
                   <span class="text-purple-400">💜</span>
                   <template v-if="getLevelProgress(student.pet_exp).isMaxLevel">
                     <span class="font-medium text-purple-600">{{ getLevelProgress(student.pet_exp).current }}</span>
-                    <span class="text-xs text-gray-400">(已满级)</span>
+                    <span class="text-xs text-amber-500 font-medium">🏆 已毕业</span>
                   </template>
                   <template v-else>
                     <span class="font-medium text-purple-600">{{ getLevelProgress(student.pet_exp).current }}</span>
@@ -1688,8 +1693,9 @@ onMounted(async () => {
             <div class="mt-4">
               <div class="flex justify-between text-white/90 text-sm mb-1">
                 <span>成长值</span>
-                <span v-if="getLevelProgress(detailStudent.pet_exp).isMaxLevel">
-                  {{ getLevelProgress(detailStudent.pet_exp).current }} (已满级)
+                <span v-if="getLevelProgress(detailStudent.pet_exp).isMaxLevel" class="flex items-center gap-1">
+                  <span>{{ getLevelProgress(detailStudent.pet_exp).current }}</span>
+                  <span class="text-yellow-300 font-medium">🏆 已毕业，获得专属徽章</span>
                 </span>
                 <span v-else>
                   {{ getLevelProgress(detailStudent.pet_exp).current }}/{{ getLevelProgress(detailStudent.pet_exp).required }}
