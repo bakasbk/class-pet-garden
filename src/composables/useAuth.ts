@@ -7,8 +7,34 @@ interface User {
   isGuest: boolean
 }
 
+// 全局状态（模块级别单例）
 const user = ref<User | null>(null)
 const token = ref<string>(localStorage.getItem('token') || '')
+
+// 创建带认证的 axios 实例（单例）
+const api = axios.create({
+  baseURL: '/pet-garden/api'
+})
+
+// 请求拦截器：自动添加 Authorization header
+api.interceptors.request.use((config) => {
+  if (token.value) {
+    config.headers.Authorization = `Bearer ${token.value}`
+  }
+  return config
+})
+
+// 响应拦截器：处理 401 错误自动退回游客模式
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401 && !isGuest.value) {
+      // 已登录用户 token 失效，退回游客模式
+      logout()
+    }
+    return Promise.reject(error)
+  }
+)
 
 // 初始化用户状态
 const savedUser = localStorage.getItem('user')
@@ -30,51 +56,40 @@ if (!user.value) {
   localStorage.setItem('user', JSON.stringify(guestUser))
 }
 
-// 创建带认证的 axios 实例
+// 计算属性
+const isLoggedIn = computed(() => !!user.value && !user.value.isGuest)
+const isGuest = computed(() => user.value?.isGuest ?? true)
+const username = computed(() => user.value?.username || '游客')
+
+// 设置用户
+function setUser(userData: User, userToken: string) {
+  user.value = userData
+  token.value = userToken
+  localStorage.setItem('token', userToken)
+  localStorage.setItem('user', JSON.stringify(userData))
+}
+
+// 退出登录（回到游客模式）
+function logout() {
+  const guestUser = { id: 'guest', username: '游客', isGuest: true }
+  user.value = guestUser
+  token.value = 'guest'
+  localStorage.setItem('token', 'guest')
+  localStorage.setItem('user', JSON.stringify(guestUser))
+}
+
+// 获取用户信息（已登录用户）
+async function fetchUserInfo() {
+  if (isGuest.value) return
+  try {
+    const res = await api.get('/auth/me')
+    user.value = res.data.user
+  } catch {
+    logout()
+  }
+}
+
 export function useAuth() {
-  const api = axios.create({
-    baseURL: '/pet-garden/api'
-  })
-  
-  // 添加请求拦截器
-  api.interceptors.request.use((config) => {
-    if (token.value) {
-      config.headers.Authorization = `Bearer ${token.value}`
-    }
-    return config
-  })
-  
-  const isLoggedIn = computed(() => !!user.value && !user.value.isGuest)
-  const isGuest = computed(() => user.value?.isGuest ?? true)
-  const username = computed(() => user.value?.username || '游客')
-  
-  function setUser(userData: User, userToken: string) {
-    user.value = userData
-    token.value = userToken
-    localStorage.setItem('token', userToken)
-    localStorage.setItem('user', JSON.stringify(userData))
-  }
-  
-  function logout() {
-    // 退出登录后回到游客模式
-    const guestUser = { id: 'guest', username: '游客', isGuest: true }
-    user.value = guestUser
-    token.value = 'guest'
-    localStorage.setItem('token', 'guest')
-    localStorage.setItem('user', JSON.stringify(guestUser))
-  }
-  
-  async function fetchUserInfo() {
-    if (isGuest.value) return // 游客不需要获取用户信息
-    try {
-      const res = await api.get('/auth/me')
-      user.value = res.data.user
-    } catch {
-      // Token 无效，回到游客模式
-      logout()
-    }
-  }
-  
   return {
     user,
     token,
