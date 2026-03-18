@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, nextTick } from 'vue'
 import type { Student, Class, Rule, EvaluationRecord } from '@/types'
-import { useAuth } from '@/composables/useAuth'
+import { useAuth, setGlobalErrorHandler } from '@/composables/useAuth'
 import { useToast } from '@/composables/useToast'
 import { useConfirm } from '@/composables/useConfirm'
 import { useLevelUp } from '@/composables/useLevelUp'
@@ -30,6 +30,11 @@ const { isGuest, username, logout, api } = useAuth()
 const toast = useToast()
 const { confirmDialog, showConfirm, closeConfirm } = useConfirm()
 const { showLevelUpAnimation, levelUpInfo, levelUpPhase, triggerLevelUp } = useLevelUp()
+
+// 设置全局错误处理器
+setGlobalErrorHandler((message) => {
+  toast.error(message)
+})
 
 // State
 const classes = ref<Class[]>([])

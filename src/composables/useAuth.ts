@@ -7,6 +7,13 @@ interface User {
   isGuest: boolean
 }
 
+// 全局错误处理器
+let globalErrorHandler: ((message: string) => void) | null = null
+
+export function setGlobalErrorHandler(handler: (message: string) => void) {
+  globalErrorHandler = handler
+}
+
 // 全局状态（模块级别单例）
 const user = ref<User | null>(null)
 const token = ref<string>(localStorage.getItem('token') || '')
@@ -24,14 +31,22 @@ api.interceptors.request.use((config) => {
   return config
 })
 
-// 响应拦截器：处理 401 错误自动退回游客模式
+// 响应拦截器：处理错误
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    const message = error.response?.data?.error || error.message || '请求失败'
+
+    // 显示错误提示
+    if (globalErrorHandler) {
+      globalErrorHandler(message)
+    }
+
+    // 401 错误自动退回游客模式
     if (error.response?.status === 401 && !isGuest.value) {
-      // 已登录用户 token 失效，退回游客模式
       logout()
     }
+
     return Promise.reject(error)
   }
 )
