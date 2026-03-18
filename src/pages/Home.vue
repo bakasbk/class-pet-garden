@@ -21,7 +21,6 @@ import StudentModal from '@/components/modals/StudentModal.vue'
 import ImportModal from '@/components/modals/ImportModal.vue'
 import EvaluationModal from '@/components/modals/EvaluationModal.vue'
 import PetModal from '@/components/modals/PetModal.vue'
-import RankModal from '@/components/modals/RankModal.vue'
 import RecordsModal from '@/components/modals/RecordsModal.vue'
 import RulesModal from '@/components/modals/RulesModal.vue'
 
@@ -53,7 +52,6 @@ const showStudentModal = ref(false)
 const showImportModal = ref(false)
 const showEvalModal = ref(false)
 const showPetModal = ref(false)
-const showRankModal = ref(false)
 const showRecordsModal = ref(false)
 const showRulesModal = ref(false)
 const showDetailPanel = ref(false)
@@ -520,7 +518,6 @@ onMounted(async () => {
       @import-students="showImportModal = true"
       @delete-students="showDeleteStudentMode = true; deleteStudentList = []"
       @start-batch="startBatchMode"
-      @show-rank="showRankModal = true"
       @show-records="loadEvaluationRecords(); showRecordsModal = true"
       @show-rules="showRulesModal = true"
       @login="showAuthModal = true"
@@ -591,7 +588,6 @@ onMounted(async () => {
     <ImportModal :show="showImportModal" @close="showImportModal = false" @submit="importStudents" />
     <EvaluationModal :show="showEvalModal" :student="selectedStudent" :selected-count="selectedStudents.size" :rules="rules" @close="showEvalModal = false" @evaluate="handleEvaluate" />
     <PetModal :show="showPetModal" :student="selectedStudent" @close="showPetModal = false; selectedStudent = null" @select="selectPet" />
-    <RankModal :show="showRankModal" :students="students" @close="showRankModal = false" />
     <RecordsModal :show="showRecordsModal" :records="evaluationRecords" :total-records="totalRecords" :page="recordsPage" :total-pages="totalPages" @close="showRecordsModal = false" @undo="handleUndoLastEvaluation" @prev-page="recordsPage--; loadEvaluationRecords()" @next-page="recordsPage++; loadEvaluationRecords()" @go-to-page="recordsPage = $event; loadEvaluationRecords()" />
     <RulesModal :show="showRulesModal" :rules="rules" @close="showRulesModal = false" @add-rule="addRule" @delete-rule="deleteRule" />
     <DetailPanel :show="showDetailPanel" :student="detailStudent" :rules="rules" :student-records="studentRecords" @close="closeDetailPanel" @change-pet="showDetailPanel = false; selectedStudent = detailStudent; showPetModal = true" @evaluate="handleDetailEvaluate" />
