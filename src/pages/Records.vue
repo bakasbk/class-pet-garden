@@ -22,8 +22,32 @@ const pageSize = 30
 const totalRecords = ref(0)
 const totalPages = computed(() => Math.ceil(totalRecords.value / pageSize))
 
+// 选中的记录
+const selectedIds = ref<Set<string>>(new Set())
+const isAllSelected = computed(() => 
+  records.value.length > 0 && 
+  records.value.every(r => selectedIds.value.has(r.id))
+)
+
+// 搜索
+const searchQuery = ref('')
+const filteredRecords = computed(() => {
+  if (!searchQuery.value) return records.value
+  const query = searchQuery.value.toLowerCase()
+  return records.value.filter(r => 
+    r.student_name?.toLowerCase().includes(query) ||
+    r.reason?.toLowerCase().includes(query) ||
+    r.category?.toLowerCase().includes(query)
+  )
+})
+
 function formatDate(timestamp: number) {
-  return new Date(timestamp).toLocaleString('zh-CN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+  return new Date(timestamp).toLocaleString('zh-CN', { 
+    month: 'short', 
+    day: 'numeric', 
+    hour: '2-digit', 
+    minute: '2-digit' 
+  })
 }
 
 async function loadClasses() {
@@ -46,7 +70,8 @@ async function loadRecords() {
   isLoading.value = true
   try {
     const res = await api.get(`/evaluations?classId=${currentClass.value.id}&page=${page.value}&pageSize=${pageSize}`)
-    records.value = res.data.records
+    // 最新记录在前（API 返回的是旧记录在前，需要反转）
+    records.value = (res.data.records || []).reverse()
     totalRecords.value = res.data.total
   } catch (error) {
     console.error('加载记录失败:', error)
@@ -55,7 +80,29 @@ async function loadRecords() {
   }
 }
 
-async function undoRecord(recordId?: string) {
+// 选择操作
+function toggleSelect(id: string) {
+  if (selectedIds.value.has(id)) {
+    selectedIds.value.delete(id)
+  } else {
+    selectedIds.value.add(id)
+  }
+}
+
+function toggleSelectAll() {
+  if (isAllSelected.value) {
+    selectedIds.value.clear()
+  } else {
+    records.value.forEach(r => selectedIds.value.add(r.id))
+  }
+}
+
+function clearSelection() {
+  selectedIds.value.clear()
+}
+
+// 撤回单条记录
+async function undoRecord(recordId: string) {
   showConfirm({
     title: '撤回评价',
     message: '确定撤回该评价？将恢复学生的积分。',
@@ -63,12 +110,38 @@ async function undoRecord(recordId?: string) {
     type: 'warning',
     onConfirm: async () => {
       try {
-        await api.delete(`/evaluations/${recordId || records.value[0]?.id}`)
+        await api.delete(`/evaluations/${recordId}`)
         toast.success('已撤回')
+        selectedIds.value.delete(recordId)
         loadRecords()
       } catch (error) {
         toast.error('撤回失败')
       }
+    }
+  })
+}
+
+// 批量撤回
+async function undoSelected() {
+  if (selectedIds.value.size === 0) return
+  showConfirm({
+    title: '批量撤回',
+    message: `确定撤回选中的 ${selectedIds.value.size} 条评价？将恢复相关学生的积分。`,
+    confirmText: '撤回',
+    type: 'warning',
+    onConfirm: async () => {
+      let successCount = 0
+      for (const recordId of selectedIds.value) {
+        try {
+          await api.delete(`/evaluations/${recordId}`)
+          successCount++
+        } catch (error) {
+          console.error('撤回失败:', error)
+        }
+      }
+      toast.success(`已撤回 ${successCount} 条评价`)
+      selectedIds.value.clear()
+      loadRecords()
     }
   })
 }
@@ -79,6 +152,7 @@ function syncCurrentClass() {
   if (savedClassId && savedClassId !== currentClass.value?.id) {
     currentClass.value = classes.value.find(c => c.id === savedClassId) || classes.value[0]
     page.value = 1
+    selectedIds.value.clear()
     loadRecords()
   }
 }
@@ -104,7 +178,7 @@ onActivated(() => {
     />
 
     <main class="flex-1 p-6">
-      <div class="max-w-4xl mx-auto">
+      <div class="max-w-5xl mx-auto">
         <!-- 头部 -->
         <div class="flex items-center justify-between mb-6">
           <div>
@@ -115,13 +189,25 @@ onActivated(() => {
               共 {{ totalRecords }} 条记录
             </p>
           </div>
-          <button
-            v-if="records.length > 0"
-            @click="undoRecord()"
-            class="px-4 py-2 text-sm text-orange-500 hover:bg-orange-50 border border-orange-200 rounded-xl font-medium transition-colors flex items-center gap-1"
-          >
-            ↩️ 撤回最新
-          </button>
+          <div class="flex items-center gap-2">
+            <button
+              v-if="selectedIds.size > 0"
+              @click="undoSelected"
+              class="px-4 py-2 text-sm text-orange-500 hover:bg-orange-50 border border-orange-200 rounded-xl font-medium transition-colors"
+            >
+              ↩️ 撤回选中 ({{ selectedIds.size }})
+            </button>
+          </div>
+        </div>
+
+        <!-- 搜索 -->
+        <div class="mb-4">
+          <input
+            v-model="searchQuery"
+            type="text"
+            placeholder="🔍 搜索学生姓名、原因、分类..."
+            class="w-full max-w-sm border-2 border-gray-200 rounded-xl px-4 py-2 text-sm bg-white shadow-sm focus:outline-none focus:border-orange-400 transition-colors"
+          />
         </div>
 
         <!-- 加载中 -->
@@ -139,87 +225,122 @@ onActivated(() => {
         </div>
 
         <!-- 记录列表 -->
-        <template v-else>
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div
-              v-for="record in records"
-              :key="record.id"
-              class="p-4 bg-white border border-gray-100 rounded-2xl shadow-sm hover:shadow-md transition-shadow"
-            >
-              <!-- 头部 -->
-              <div class="flex items-center justify-between mb-3">
-                <div class="flex items-center gap-2">
-                  <span class="w-8 h-8 rounded-full bg-gradient-to-br from-orange-400 to-pink-500 text-white flex items-center justify-center text-sm font-bold">
-                    {{ record.student_name?.charAt(0) || '?' }}
-                  </span>
-                  <span class="font-bold text-gray-800">{{ record.student_name }}</span>
-                </div>
-                <span
-                  class="px-3 py-1 rounded-full text-sm font-bold"
-                  :class="record.points > 0 ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'"
-                >
-                  {{ record.points > 0 ? '+' : '' }}{{ record.points }}
-                </span>
-              </div>
-
-              <!-- 原因 -->
-              <div class="text-sm text-gray-600 mb-3 line-clamp-2">
-                {{ record.reason }}
-              </div>
-
-              <!-- 底部 -->
-              <div class="flex items-center justify-between text-xs text-gray-400">
-                <span class="px-2 py-1 bg-gray-100 rounded-lg">{{ record.category }}</span>
-                <div class="flex items-center gap-2">
-                  <span>{{ formatDate(record.timestamp) }}</span>
-                  <button
-                    @click="undoRecord(record.id)"
-                    class="text-orange-500 hover:text-orange-600 hover:bg-orange-50 px-2 py-1 rounded transition-colors"
-                  >
-                    撤回
-                  </button>
-                </div>
-              </div>
+        <div v-else class="bg-white rounded-2xl shadow-sm overflow-hidden">
+          <!-- 表头 -->
+          <div class="grid grid-cols-12 gap-4 px-4 py-3 bg-gray-50 border-b border-gray-100 text-sm font-medium text-gray-500">
+            <div class="col-span-1 flex items-center">
+              <input 
+                type="checkbox" 
+                :checked="isAllSelected"
+                @change="toggleSelectAll"
+                class="w-4 h-4 rounded border-gray-300 text-orange-500 focus:ring-orange-400 cursor-pointer"
+              />
             </div>
+            <div class="col-span-2">学生</div>
+            <div class="col-span-2">积分</div>
+            <div class="col-span-3">原因</div>
+            <div class="col-span-1">分类</div>
+            <div class="col-span-2">时间</div>
+            <div class="col-span-1 text-right">操作</div>
           </div>
 
-          <!-- 分页 -->
-          <div v-if="totalPages > 1" class="flex items-center justify-center gap-2 mt-6">
-            <button
-              @click="page--; loadRecords()"
-              :disabled="page === 1"
-              class="px-4 py-2 rounded-xl border border-gray-200 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-            >
-              上一页
-            </button>
-            <div class="flex items-center gap-1">
+          <!-- 记录行 -->
+          <div 
+            v-for="record in filteredRecords" 
+            :key="record.id"
+            class="grid grid-cols-12 gap-4 px-4 py-3 border-b border-gray-50 hover:bg-gray-50/50 transition-colors items-center"
+            :class="{ 'bg-orange-50/30': selectedIds.has(record.id) }"
+          >
+            <!-- 选择框 -->
+            <div class="col-span-1">
+              <input 
+                type="checkbox" 
+                :checked="selectedIds.has(record.id)"
+                @change="toggleSelect(record.id)"
+                class="w-4 h-4 rounded border-gray-300 text-orange-500 focus:ring-orange-400 cursor-pointer"
+              />
+            </div>
+
+            <!-- 学生 -->
+            <div class="col-span-2 flex items-center gap-2">
+              <span class="w-7 h-7 rounded-full bg-gradient-to-br from-orange-400 to-pink-500 text-white flex items-center justify-center text-xs font-bold shrink-0">
+                {{ record.student_name?.charAt(0) || '?' }}
+              </span>
+              <span class="font-medium text-gray-800 truncate">{{ record.student_name }}</span>
+            </div>
+
+            <!-- 积分 -->
+            <div class="col-span-2">
+              <span
+                class="px-2.5 py-1 rounded-full text-sm font-bold"
+                :class="record.points > 0 ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'"
+              >
+                {{ record.points > 0 ? '+' : '' }}{{ record.points }}
+              </span>
+            </div>
+
+            <!-- 原因 -->
+            <div class="col-span-3 text-sm text-gray-600 truncate" :title="record.reason">
+              {{ record.reason }}
+            </div>
+
+            <!-- 分类 -->
+            <div class="col-span-1">
+              <span class="text-xs px-2 py-1 bg-gray-100 rounded-lg text-gray-500">{{ record.category }}</span>
+            </div>
+
+            <!-- 时间 -->
+            <div class="col-span-2 text-sm text-gray-400">
+              {{ formatDate(record.timestamp) }}
+            </div>
+
+            <!-- 操作 -->
+            <div class="col-span-1 text-right">
+              <button 
+                @click="undoRecord(record.id)" 
+                class="text-orange-500 hover:text-orange-600 text-sm font-medium"
+              >
+                撤回
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 搜索无结果 -->
+        <div v-if="!isLoading && records.length > 0 && filteredRecords.length === 0" class="text-center py-12 text-gray-500">
+          没有找到匹配的记录
+        </div>
+
+        <!-- 分页 -->
+        <div v-if="totalPages > 1" class="flex items-center justify-center gap-2 mt-6">
+          <button
+            @click="page--; loadRecords()"
+            :disabled="page === 1"
+            class="px-4 py-2 rounded-xl border border-gray-200 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+          >
+            上一页
+          </button>
+          <div class="flex items-center gap-1">
+            <template v-for="p in totalPages" :key="p">
               <button
-                v-for="p in Math.min(5, totalPages)"
-                :key="p"
+                v-if="p === 1 || p === totalPages || (p >= page - 1 && p <= page + 1)"
                 @click="page = p; loadRecords()"
                 class="w-10 h-10 rounded-xl text-sm font-medium transition-colors"
                 :class="page === p ? 'bg-orange-500 text-white' : 'hover:bg-gray-100'"
               >
                 {{ p }}
               </button>
-              <span v-if="totalPages > 5" class="px-2 text-gray-400">...</span>
-              <button
-                v-if="totalPages > 5"
-                @click="page = totalPages; loadRecords()"
-                class="w-10 h-10 rounded-xl text-sm font-medium transition-colors hover:bg-gray-100"
-              >
-                {{ totalPages }}
-              </button>
-            </div>
-            <button
-              @click="page++; loadRecords()"
-              :disabled="page === totalPages"
-              class="px-4 py-2 rounded-xl border border-gray-200 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-            >
-              下一页
-            </button>
+              <span v-else-if="p === page - 2 || p === page + 2" class="px-1 text-gray-400">...</span>
+            </template>
           </div>
-        </template>
+          <button
+            @click="page++; loadRecords()"
+            :disabled="page === totalPages"
+            class="px-4 py-2 rounded-xl border border-gray-200 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+          >
+            下一页
+          </button>
+        </div>
       </div>
     </main>
 
