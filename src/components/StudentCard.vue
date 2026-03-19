@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { Student } from '@/types'
-import { getPetType, getLevelProgress, getPetLevelImage, calculateLevel, getDeadPetImage, DEATH_THRESHOLD } from '@/data/pets'
+import { getPetType, getLevelProgress, getPetLevelImage, calculateLevel, DEATH_THRESHOLD } from '@/data/pets'
 import PetImage from './PetImage.vue'
 
 defineProps<{
@@ -9,7 +9,6 @@ defineProps<{
   isDeleteMode?: boolean
   isDeleteSelected?: boolean
   scoreAnimation?: { points: number; show: boolean } | null
-  showReviveAnimation?: boolean
 }>()
 
 defineEmits<{
@@ -44,10 +43,6 @@ function getLevelBorderClass(level: number): string {
 
 function getStudentPetImage(student: Student): string {
   if (!student.pet_type) return ''
-  // 死亡状态显示墓碑
-  if (student.pet_status === 'dead' || student.total_points < DEATH_THRESHOLD) {
-    return getDeadPetImage()
-  }
   return getPetLevelImage(student.pet_type, student.pet_level)
 }
 
@@ -114,19 +109,6 @@ function getHealthProgress(student: Student): number {
     }]"
     @click="$emit('click')"
   >
-    <!-- 复活动画 -->
-    <Transition name="revive">
-      <div
-        v-if="showReviveAnimation"
-        class="absolute inset-0 z-30 flex items-center justify-center bg-white/90"
-      >
-        <div class="text-center animate-bounce-in">
-          <div class="text-6xl mb-2">✨</div>
-          <div class="text-xl font-bold text-green-500">复活了！</div>
-        </div>
-      </div>
-    </Transition>
-
     <!-- 死亡/受伤遮罩 -->
     <div
       v-if="getPetStatus(student) !== 'alive'"
@@ -180,11 +162,13 @@ function getHealthProgress(student: Student): number {
         <div class="w-full h-full overflow-hidden" style="border-radius: 14px 14px 0 0; margin: -1px -1px 0 -1px; width: calc(100% + 2px);">
           <PetImage
             :src="getStudentPetImage(student)"
-            :alt="getPetStatus(student) === 'dead' ? '已死亡' : getPetType(student.pet_type)?.name"
+            :alt="getPetType(student.pet_type)?.name"
             size="full"
             :rounded="false"
             :show-loading="true"
-            class="w-full h-full"
+            class="w-full h-full transition-all duration-300"
+            :class="getPetStatus(student) === 'dead' ? 'grayscale opacity-50' : 
+                    getPetStatus(student) === 'injured' ? 'hue-rotate-[-10deg] brightness-95' : ''"
           />
         </div>
         <!-- 受伤标记 -->
@@ -298,21 +282,3 @@ function getHealthProgress(student: Student): number {
     </div>
   </div>
 </template>
-
-<style scoped>
-.revive-enter-active {
-  animation: reviveIn 0.8s ease-out;
-}
-.revive-leave-active {
-  transition: opacity 0.3s ease;
-}
-.revive-leave-to {
-  opacity: 0;
-}
-
-@keyframes reviveIn {
-  0% { opacity: 0; }
-  50% { opacity: 1; }
-  100% { opacity: 1; }
-}
-</style>

@@ -5,6 +5,7 @@ import { useAuth, setGlobalErrorHandler } from '@/composables/useAuth'
 import { useToast } from '@/composables/useToast'
 import { useConfirm } from '@/composables/useConfirm'
 import { useLevelUp } from '@/composables/useLevelUp'
+import { usePetStatusAnimation } from '@/composables/usePetStatusAnimation'
 import { getPetType } from '@/data/pets'
 import { pinyin } from 'pinyin-pro'
 
@@ -23,12 +24,14 @@ import ImportModal from '@/components/modals/ImportModal.vue'
 import EvaluationModal from '@/components/modals/EvaluationModal.vue'
 import PetModal from '@/components/modals/PetModal.vue'
 import RecordsModal from '@/components/modals/RecordsModal.vue'
+import PetStatusModal from '@/components/PetStatusModal.vue'
 
 // Auth & Toast
 const { isGuest, username, logout, api } = useAuth()
 const toast = useToast()
 const { confirmDialog, showConfirm, closeConfirm } = useConfirm()
 const { showLevelUpAnimation, levelUpInfo, levelUpPhase, triggerLevelUp } = useLevelUp()
+const { triggerAnimation: triggerPetStatusAnimation } = usePetStatusAnimation()
 
 // 设置全局错误处理器
 setGlobalErrorHandler((message) => {
@@ -356,20 +359,21 @@ async function handleEvaluate(rule: Rule) {
     if (res.data.graduated) {
       toast.success(`🎓 恭喜！${selectedStudent.value.name} 的宠物毕业了！`)
     }
-    // 死亡提示
+    // 死亡动画
     if (res.data.died) {
-      toast.error(`💀 ${selectedStudent.value.name} 的宠物因积分过低而死亡...加油复活它吧！`)
+      triggerPetStatusAnimation('death', selectedStudent.value.name, selectedStudent.value.pet_type || '', selectedStudent.value.pet_level || 1, 'injured', 'dead')
     }
-    // 受伤提示
-    if (res.data.injured) {
-      toast.warning(`🩹 ${selectedStudent.value.name} 的宠物受伤了！快加油恢复吧！`)
+    // 受伤动画
+    else if (res.data.injured) {
+      triggerPetStatusAnimation('injured', selectedStudent.value.name, selectedStudent.value.pet_type || '', selectedStudent.value.pet_level || 1, 'alive', 'injured')
     }
-    // 复活/恢复提示
-    if (res.data.revived) {
-      toast.success(`✨ ${selectedStudent.value.name} 的宠物复活了！`)
+    // 复活动画
+    else if (res.data.revived) {
+      triggerPetStatusAnimation('revive', selectedStudent.value.name, selectedStudent.value.pet_type || '', selectedStudent.value.pet_level || 1, 'dead', 'alive')
     }
-    if (res.data.healed && !res.data.revived) {
-      toast.success(`💚 ${selectedStudent.value.name} 的宠物恢复健康了！`)
+    // 恢复动画
+    else if (res.data.healed && !res.data.revived) {
+      triggerPetStatusAnimation('heal', selectedStudent.value.name, selectedStudent.value.pet_type || '', selectedStudent.value.pet_level || 1, 'injured', 'alive')
     }
     showEvalModal.value = false
     await loadStudents()
@@ -392,20 +396,21 @@ async function handleDetailEvaluate(rule: Rule) {
     if (res.data.levelUp) {
       triggerLevelUp(detailStudent.value.name, res.data.petLevel, detailStudent.value.pet_type || '', res.data.petLevel - 1)
     }
-    // 死亡提示
+    // 死亡动画
     if (res.data.died) {
-      toast.error(`💀 ${detailStudent.value.name} 的宠物因积分过低而死亡...加油复活它吧！`)
+      triggerPetStatusAnimation('death', detailStudent.value.name, detailStudent.value.pet_type || '', detailStudent.value.pet_level || 1, 'injured', 'dead')
     }
-    // 受伤提示
-    if (res.data.injured) {
-      toast.warning(`🩹 ${detailStudent.value.name} 的宠物受伤了！快加油恢复吧！`)
+    // 受伤动画
+    else if (res.data.injured) {
+      triggerPetStatusAnimation('injured', detailStudent.value.name, detailStudent.value.pet_type || '', detailStudent.value.pet_level || 1, 'alive', 'injured')
     }
-    // 复活/恢复提示
-    if (res.data.revived) {
-      toast.success(`✨ ${detailStudent.value.name} 的宠物复活了！`)
+    // 复活动画
+    else if (res.data.revived) {
+      triggerPetStatusAnimation('revive', detailStudent.value.name, detailStudent.value.pet_type || '', detailStudent.value.pet_level || 1, 'dead', 'alive')
     }
-    if (res.data.healed && !res.data.revived) {
-      toast.success(`💚 ${detailStudent.value.name} 的宠物恢复健康了！`)
+    // 恢复动画
+    else if (res.data.healed && !res.data.revived) {
+      triggerPetStatusAnimation('heal', detailStudent.value.name, detailStudent.value.pet_type || '', detailStudent.value.pet_level || 1, 'injured', 'alive')
     }
     await loadStudents()
     closeDetailPanel()
@@ -550,6 +555,9 @@ onActivated(() => {
       :prev-level="levelUpInfo.prevLevel"
       :phase="levelUpPhase"
     />
+
+    <!-- Pet Status Modal -->
+    <PetStatusModal />
 
     <!-- Header -->
     <Header
