@@ -7,6 +7,17 @@ import { useConfirm } from '@/composables/useConfirm'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import Header from '@/components/layout/Header.vue'
 import { getPetLevelImage } from '@/data/pets'
+import { pinyin } from 'pinyin-pro'
+
+// 辅助函数：获取拼音首字母
+function getPinyinInitials(text: string): string {
+  return pinyin(text, { pattern: 'first', toneType: 'none' }).replace(/\s/g, '').toLowerCase()
+}
+
+// 辅助函数：获取完整拼音
+function getPinyinFull(text: string): string {
+  return pinyin(text, { toneType: 'none' }).replace(/\s/g, '').toLowerCase()
+}
 
 const { api, isGuest, username } = useAuth()
 const toast = useToast()
@@ -21,11 +32,24 @@ const isLoading = ref(true)
 const searchQuery = ref('')
 const filteredStudents = computed(() => {
   if (!searchQuery.value) return students.value
-  const query = searchQuery.value.toLowerCase()
-  return students.value.filter(s => 
-    s.name.toLowerCase().includes(query) ||
-    (s.student_no && s.student_no.toLowerCase().includes(query))
-  )
+  const query = searchQuery.value.toLowerCase().trim()
+  return students.value.filter(s => {
+    // 1. 姓名匹配
+    if (s.name.toLowerCase().includes(query)) return true
+    
+    // 2. 学号匹配
+    if (s.student_no && s.student_no.toLowerCase().includes(query)) return true
+    
+    // 3. 拼音首字母匹配（如 "cxm" 匹配 "陈小明"）
+    const initials = getPinyinInitials(s.name)
+    if (initials.includes(query)) return true
+    
+    // 4. 完整拼音匹配
+    const fullPinyin = getPinyinFull(s.name)
+    if (fullPinyin.includes(query)) return true
+    
+    return false
+  })
 })
 
 // 选中的学生（用于批量操作）
