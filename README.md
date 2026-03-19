@@ -186,47 +186,21 @@ GET    /api/health               # 健康检查
 
 ## 💾 数据备份
 
-### 自动备份
+使用独立的 [Git Backup](https://github.com/gaotong132/backups) 项目进行自动备份：
 
-系统每天凌晨 2 点自动备份数据库，备份文件存储在 `backups/` 目录：
+- 每天自动备份数据库
+- 保留最近 10 个备份
+- 自动推送到 GitHub 私有仓库
 
-```
-backups/
-├── pet-garden-2026-03-19-020000.db.gz  # 日备份
-├── pet-garden-2026-03-20-020000.db.gz
-└── weekly/
-    └── pet-garden-weekly-2026-W11.db.gz # 周备份
-```
-
-**保留策略：**
-- 日备份：保留最近 7 天
-- 周备份：保留最近 4 周（每周日创建）
-
-### 手动备份
-
+手动备份：
 ```bash
-# 执行备份
-python3 scripts/backup.py
-
-# 指定保留天数
-python3 scripts/backup.py 14
+cd /root/.openclaw/workspace/projects/git-backup
+python3 backup.py backup --force
 ```
 
-### 恢复数据
-
-```bash
-# 查看可用备份
-python3 scripts/restore.py
-
-# 恢复指定备份
-python3 scripts/restore.py pet-garden-2026-03-19-020000.db.gz
-```
-
-### 导出/导入（Web界面）
-
-通过 API 或前端界面可导出 JSON 格式的完整数据：
-- `GET /api/backup` - 下载 JSON 备份
-- `POST /api/backup` - 上传恢复数据
+通过 API 导出 JSON 格式：
+- `GET /api/backup` - 下载完整数据
+- `POST /api/backup` - 恢复数据
 
 ---
 
