@@ -11,7 +11,7 @@ router.get('/', authMiddleware, (req, res) => {
   res.json({ classes })
 })
 
-// 获取班级学生列表
+// 获取班级学生列表（包含标签）
 router.get('/:classId/students', authMiddleware, (req, res) => {
   const cls = db.prepare('SELECT * FROM classes WHERE id = ?').get(req.params.classId)
   if (!cls) {
@@ -21,7 +21,21 @@ router.get('/:classId/students', authMiddleware, (req, res) => {
     return res.status(403).json({ error: '无权访问此班级' })
   }
   const students = db.prepare('SELECT * FROM students WHERE class_id = ? ORDER BY name').all(req.params.classId)
-  res.json({ students })
+  
+  // 批量获取所有学生的标签
+  const studentsWithTags = students.map(student => {
+    const tags = db.prepare(`
+      SELECT st.id, st.name, st.color, st.user_id, st.created_at
+      FROM student_tags st
+      JOIN student_tag_relations str ON st.id = str.tag_id
+      WHERE str.student_id = ? AND st.user_id = ?
+      ORDER BY str.created_at DESC
+    `).all(student.id, req.userId)
+    
+    return { ...student, tags }
+  })
+  
+  res.json({ students: studentsWithTags })
 })
 
 // 创建班级（关联当前用户）

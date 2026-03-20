@@ -100,7 +100,12 @@ async function loadStudents() {
   try {
     const res = await api.get(`/classes/${currentClass.value.id}/students`)
     students.value = res.data.students
-    await loadStudentsTags()
+    // 标签已经包含在学生数据中
+    const tagMap = new Map<string, Tag[]>()
+    for (const student of students.value) {
+      tagMap.set(student.id, (student as any).tags || [])
+    }
+    studentTags.value = tagMap
   } catch (error) {
     console.error('加载学生失败:', error)
   } finally {
@@ -115,19 +120,6 @@ async function loadTags() {
   } catch (error) {
     console.error('加载标签失败:', error)
   }
-}
-
-async function loadStudentsTags() {
-  const tagMap = new Map<string, Tag[]>()
-  for (const student of students.value) {
-    try {
-      const res = await api.get(`/tags/student/${student.id}`)
-      tagMap.set(student.id, res.data.tags || [])
-    } catch (error) {
-      tagMap.set(student.id, [])
-    }
-  }
-  studentTags.value = tagMap
 }
 
 async function loadSingleStudentTags(studentId: string) {
