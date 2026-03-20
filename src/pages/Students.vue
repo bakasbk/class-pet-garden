@@ -9,12 +9,18 @@ import Header from '@/components/layout/Header.vue'
 import { getPetLevelImage } from '@/data/pets'
 import { pinyin } from 'pinyin-pro'
 
-// 辅助函数：获取拼音首字母
+interface Tag {
+  id: string
+  name: string
+  color: string
+  user_id: string
+  created_at: number
+}
+
 function getPinyinInitials(text: string): string {
   return pinyin(text, { pattern: 'first', toneType: 'none' }).replace(/\s/g, '').toLowerCase()
 }
 
-// 辅助函数：获取完整拼音
 function getPinyinFull(text: string): string {
   return pinyin(text, { toneType: 'none' }).replace(/\s/g, '').toLowerCase()
 }
@@ -28,50 +34,44 @@ const currentClass = ref<Class | null>(null)
 const students = ref<Student[]>([])
 const isLoading = ref(true)
 
-// 搜索和筛选
+const allTags = ref<Tag[]>([])
+const studentTags = ref<Map<string, Tag[]>>(new Map())
+
 const searchQuery = ref('')
 const filteredStudents = computed(() => {
   if (!searchQuery.value) return students.value
   const query = searchQuery.value.toLowerCase().trim()
   return students.value.filter(s => {
-    // 1. 姓名匹配
     if (s.name.toLowerCase().includes(query)) return true
-    
-    // 2. 学号匹配
     if (s.student_no && s.student_no.toLowerCase().includes(query)) return true
-    
-    // 3. 拼音首字母匹配（如 "cxm" 匹配 "陈小明"）
     const initials = getPinyinInitials(s.name)
     if (initials.includes(query)) return true
-    
-    // 4. 完整拼音匹配
     const fullPinyin = getPinyinFull(s.name)
     if (fullPinyin.includes(query)) return true
-    
     return false
   })
 })
 
-// 选中的学生（用于批量操作）
 const selectedIds = ref<Set<string>>(new Set())
 const isAllSelected = computed(() => 
   filteredStudents.value.length > 0 && 
   filteredStudents.value.every(s => selectedIds.value.has(s.id))
 )
 
-// 编辑学生
 const editingStudent = ref<Student | null>(null)
 const editName = ref('')
 const editStudentNo = ref('')
 
-// 新增学生
 const showAddForm = ref(false)
 const newStudentName = ref('')
 const newStudentNo = ref('')
 
-// 批量导入
 const showImportForm = ref(false)
 const importText = ref('')
+
+const showTagModal = ref(false)
+const taggingStudent = ref<Student | null>(null)
+const tagMode = ref<'add' | 'remove'>('add')
 
 function getPetImage(student: Student): string {
   if (!student.pet_type) return ''
@@ -100,6 +100,7 @@ async function loadStudents() {
   try {
     const res = await api.get(`/classes/${currentClass.value.id}/students`)
     students.value = res.data.students
+    await loadStudentsTags()
   } catch (error) {
     console.error('加载学生失败:', error)
   } finally {
@@ -107,7 +108,37 @@ async function loadStudents() {
   }
 }
 
-// 选择操作
+async function loadTags() {
+  try {
+    const res = await api.get('/tags')
+    allTags.value = res.data.tags
+  } catch (error) {
+    console.error('加载标签失败:', error)
+  }
+}
+
+async function loadStudentsTags() {
+  const tagMap = new Map<string, Tag[]>()
+  for (const student of students.value) {
+    try {
+      const res = await api.get(`/tags/student/${student.id}`)
+      tagMap.set(student.id, res.data.tags || [])
+    } catch (error) {
+      tagMap.set(student.id, [])
+    }
+  }
+  studentTags.value = tagMap
+}
+
+async function loadSingleStudentTags(studentId: string) {
+  try {
+    const res = await api.get(`/tags/student/${studentId}`)
+    studentTags.value.set(studentId, res.data.tags || [])
+  } catch (error) {
+    studentTags.value.set(studentId, [])
+  }
+}
+
 function toggleSelect(id: string) {
   if (selectedIds.value.has(id)) {
     selectedIds.value.delete(id)
@@ -124,7 +155,6 @@ function toggleSelectAll() {
   }
 }
 
-// 新增学生
 async function addStudent() {
   if (!newStudentName.value.trim()) {
     toast.warning('请输入学生姓名')
@@ -146,7 +176,6 @@ async function addStudent() {
   }
 }
 
-// 编辑学生
 function startEdit(student: Student) {
   editingStudent.value = student
   editName.value = student.name
@@ -173,7 +202,6 @@ async function saveEdit() {
   }
 }
 
-// 删除学生
 async function deleteStudent(id: string) {
   showConfirm({
     title: '删除学生',
@@ -194,19 +222,16 @@ async function deleteStudent(id: string) {
   })
 }
 
-// 批量删除
 async function deleteSelected() {
   if (selectedIds.value.size === 0) return
   showConfirm({
     title: '批量删除',
-    message: `确定删除选中的 ${selectedIds.value.size} 名学生？相关的评价记录也会被删除。`,
+    message: `确定删除选中的 ${selectedIds.value.size} 名学生？`,
     confirmText: '删除',
     type: 'danger',
     onConfirm: async () => {
       try {
-        await api.post('/students/batch-delete', {
-          ids: Array.from(selectedIds.value)
-        })
+        await api.post('/students/batch-delete', { ids: Array.from(selectedIds.value) })
         toast.success(`已删除 ${selectedIds.value.size} 名学生`)
         selectedIds.value.clear()
         localStorage.setItem('pet-garden-data-version', Date.now().toString())
@@ -218,27 +243,20 @@ async function deleteSelected() {
   })
 }
 
-// 批量导入
 async function importStudents() {
   if (!importText.value.trim()) {
     toast.warning('请输入学生信息')
     return
   }
-  
   const lines = importText.value.trim().split('\n').filter(l => l.trim())
   const data = lines.map(line => {
     const parts = line.trim().split(/[,，\t\s]+/)
-    return {
-      name: parts[0]?.trim() || '',
-      student_no: parts[1]?.trim() || null
-    }
+    return { name: parts[0]?.trim() || '', student_no: parts[1]?.trim() || null }
   }).filter(s => s.name)
-  
   if (data.length === 0) {
     toast.warning('没有有效的学生数据')
     return
   }
-  
   try {
     await api.post(`/classes/${currentClass.value!.id}/students/batch`, { students: data })
     toast.success(`成功导入 ${data.length} 名学生`)
@@ -251,7 +269,45 @@ async function importStudents() {
   }
 }
 
-// 检查班级是否变化
+function openTagModal(student: Student | null, mode: 'add' | 'remove') {
+  taggingStudent.value = student
+  tagMode.value = mode
+  showTagModal.value = true
+}
+
+async function toggleTag(tag: Tag) {
+  const studentIds = taggingStudent.value 
+    ? [taggingStudent.value.id] 
+    : Array.from(selectedIds.value)
+  if (studentIds.length === 0) return
+  try {
+    if (tagMode.value === 'add') {
+      await api.post('/tags/batch-add', { studentIds, tagId: tag.id })
+      toast.success(`已为 ${studentIds.length} 名学生添加标签`)
+    } else {
+      await api.post('/tags/batch-remove', { studentIds, tagId: tag.id })
+      toast.success(`已为 ${studentIds.length} 名学生移除标签`)
+    }
+    for (const id of studentIds) {
+      await loadSingleStudentTags(id)
+    }
+    showTagModal.value = false
+  } catch (error: any) {
+    toast.error(error.response?.data?.error || '操作失败')
+  }
+}
+
+function isTagApplied(tag: Tag): boolean {
+  const studentIds = taggingStudent.value 
+    ? [taggingStudent.value.id] 
+    : Array.from(selectedIds.value)
+  if (studentIds.length === 0) return false
+  return studentIds.every(id => {
+    const tags = studentTags.value.get(id) || []
+    return tags.some(t => t.id === tag.id)
+  })
+}
+
 function syncCurrentClass() {
   const savedClassId = localStorage.getItem('pet-garden-current-class')
   if (savedClassId && savedClassId !== currentClass.value?.id) {
@@ -263,11 +319,13 @@ function syncCurrentClass() {
 
 onMounted(async () => {
   await loadClasses()
+  await loadTags()
   await loadStudents()
 })
 
 onActivated(() => {
   syncCurrentClass()
+  loadTags()
 })
 </script>
 
@@ -283,7 +341,6 @@ onActivated(() => {
 
     <main class="flex-1 p-6">
       <div class="max-w-5xl mx-auto">
-        <!-- 头部 -->
         <div class="flex items-center justify-between mb-6">
           <div>
             <h1 class="text-2xl font-bold text-gray-800 flex items-center gap-2">
@@ -293,14 +350,27 @@ onActivated(() => {
               共 {{ students.length }} 名学生
             </p>
           </div>
-          <div class="flex items-center gap-2">
-            <button
-              v-if="selectedIds.size > 0"
-              @click="deleteSelected"
-              class="px-4 py-2 text-sm text-red-500 hover:bg-red-50 border border-red-200 rounded-xl font-medium transition-colors"
-            >
-              🗑️ 删除选中 ({{ selectedIds.size }})
-            </button>
+          <div class="flex items-center gap-2 flex-wrap justify-end">
+            <template v-if="selectedIds.size > 0">
+              <button
+                @click="openTagModal(null, 'add')"
+                class="px-4 py-2 text-sm text-green-600 hover:bg-green-50 border border-green-200 rounded-xl font-medium transition-colors"
+              >
+                🏷️ 添加标签 ({{ selectedIds.size }})
+              </button>
+              <button
+                @click="openTagModal(null, 'remove')"
+                class="px-4 py-2 text-sm text-orange-600 hover:bg-orange-50 border border-orange-200 rounded-xl font-medium transition-colors"
+              >
+                🏷️ 移除标签 ({{ selectedIds.size }})
+              </button>
+              <button
+                @click="deleteSelected"
+                class="px-4 py-2 text-sm text-red-500 hover:bg-red-50 border border-red-200 rounded-xl font-medium transition-colors"
+              >
+                🗑️ 删除 ({{ selectedIds.size }})
+              </button>
+            </template>
             <button
               @click="showImportForm = true"
               class="px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 border border-gray-200 rounded-xl font-medium transition-colors"
@@ -316,7 +386,6 @@ onActivated(() => {
           </div>
         </div>
 
-        <!-- 搜索 -->
         <div class="mb-4">
           <input
             v-model="searchQuery"
@@ -326,7 +395,6 @@ onActivated(() => {
           />
         </div>
 
-        <!-- 加载中 -->
         <div v-if="isLoading" class="flex items-center justify-center py-20">
           <div class="text-center">
             <div class="text-6xl animate-bounce mb-4">👥</div>
@@ -334,7 +402,6 @@ onActivated(() => {
           </div>
         </div>
 
-        <!-- 无学生 -->
         <div v-else-if="students.length === 0" class="text-center py-20 text-gray-500 bg-white rounded-2xl shadow-sm">
           <div class="text-6xl mb-4">👨‍🎓</div>
           <div>暂无学生</div>
@@ -343,9 +410,7 @@ onActivated(() => {
           </button>
         </div>
 
-        <!-- 学生列表 -->
         <div v-else class="bg-white rounded-2xl shadow-sm overflow-hidden">
-          <!-- 表头 -->
           <div class="grid grid-cols-12 gap-4 px-4 py-3 bg-gray-50 border-b border-gray-100 text-sm font-medium text-gray-500">
             <div class="col-span-1 flex items-center">
               <input 
@@ -356,21 +421,19 @@ onActivated(() => {
               />
             </div>
             <div class="col-span-1">宠物</div>
-            <div class="col-span-3">姓名</div>
+            <div class="col-span-2">姓名</div>
             <div class="col-span-2">学号</div>
-            <div class="col-span-1">积分</div>
-            <div class="col-span-1">等级</div>
-            <div class="col-span-3 text-right">操作</div>
+            <div class="col-span-3">标签</div>
+            <div class="col-span-1 text-center">积分</div>
+            <div class="col-span-2 text-right">操作</div>
           </div>
 
-          <!-- 学生行 -->
           <div 
             v-for="student in filteredStudents" 
             :key="student.id"
             class="grid grid-cols-12 gap-4 px-4 py-3 border-b border-gray-50 hover:bg-gray-50/50 transition-colors items-center"
             :class="{ 'bg-orange-50/30': selectedIds.has(student.id) }"
           >
-            <!-- 选择框 -->
             <div class="col-span-1">
               <input 
                 type="checkbox" 
@@ -380,7 +443,6 @@ onActivated(() => {
               />
             </div>
 
-            <!-- 宠物 -->
             <div class="col-span-1">
               <div v-if="student.pet_type" class="w-10 h-10 rounded-lg overflow-hidden bg-gradient-to-br from-orange-100 to-pink-100">
                 <img :src="getPetImage(student)" class="w-full h-full object-contain" />
@@ -390,9 +452,8 @@ onActivated(() => {
               </div>
             </div>
 
-            <!-- 编辑模式 -->
             <template v-if="editingStudent?.id === student.id">
-              <div class="col-span-3">
+              <div class="col-span-2">
                 <input 
                   v-model="editName"
                   type="text"
@@ -410,21 +471,38 @@ onActivated(() => {
                   @keyup.escape="cancelEdit"
                 />
               </div>
+              <div class="col-span-3"></div>
               <div class="col-span-1 text-sm text-gray-600">{{ student.total_points }}</div>
-              <div class="col-span-1 text-sm text-gray-600">Lv.{{ student.pet_level || 1 }}</div>
-              <div class="col-span-3 text-right">
+              <div class="col-span-2 text-right">
                 <button @click="saveEdit" class="text-green-500 hover:text-green-600 text-sm font-medium px-2 py-1">保存</button>
                 <button @click="cancelEdit" class="text-gray-400 hover:text-gray-600 text-sm font-medium px-2 py-1">取消</button>
               </div>
             </template>
 
-            <!-- 显示模式 -->
             <template v-else>
-              <div class="col-span-3 font-medium text-gray-800">{{ student.name }}</div>
+              <div class="col-span-2 font-medium text-gray-800">{{ student.name }}</div>
               <div class="col-span-2 text-sm text-gray-500">{{ student.student_no || '-' }}</div>
-              <div class="col-span-1 text-sm font-medium text-orange-500">{{ student.total_points }}</div>
-              <div class="col-span-1 text-sm text-gray-600">Lv.{{ student.pet_level || 1 }}</div>
-              <div class="col-span-3 text-right">
+              <div class="col-span-3">
+                <div class="flex flex-wrap gap-1">
+                  <span
+                    v-for="tag in (studentTags.get(student.id) || [])"
+                    :key="tag.id"
+                    class="px-2 py-0.5 rounded-full text-xs text-white font-medium"
+                    :style="{ backgroundColor: tag.color }"
+                  >
+                    {{ tag.name }}
+                  </span>
+                  <button
+                    @click="openTagModal(student, 'add')"
+                    class="px-2 py-0.5 rounded-full text-xs bg-gray-100 text-gray-500 hover:bg-gray-200 transition-colors"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+              <div class="col-span-1 text-sm font-medium text-orange-500 text-center">{{ student.total_points }}</div>
+              <div class="col-span-2 text-right">
+                <button @click="openTagModal(student, 'add')" class="text-green-500 hover:text-green-600 text-sm px-2">标签</button>
                 <button @click="startEdit(student)" class="text-blue-500 hover:text-blue-600 text-sm px-2">编辑</button>
                 <button @click="deleteStudent(student.id)" class="text-red-400 hover:text-red-600 text-sm px-2">删除</button>
               </div>
@@ -432,14 +510,12 @@ onActivated(() => {
           </div>
         </div>
 
-        <!-- 搜索无结果 -->
         <div v-if="!isLoading && students.length > 0 && filteredStudents.length === 0" class="text-center py-12 text-gray-500">
           没有找到匹配的学生
         </div>
       </div>
     </main>
 
-    <!-- 添加学生弹窗 -->
     <Transition name="modal">
       <div v-if="showAddForm" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4" @click.self="showAddForm = false">
         <div class="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
@@ -474,7 +550,6 @@ onActivated(() => {
       </div>
     </Transition>
 
-    <!-- 批量导入弹窗 -->
     <Transition name="modal">
       <div v-if="showImportForm" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4" @click.self="showImportForm = false">
         <div class="bg-white rounded-2xl p-6 w-full max-w-lg shadow-2xl">
@@ -489,6 +564,47 @@ onActivated(() => {
           <div class="flex justify-end gap-2 mt-4">
             <button @click="showImportForm = false" class="px-4 py-2 text-gray-500 hover:bg-gray-100 rounded-xl text-sm font-medium transition-colors">取消</button>
             <button @click="importStudents" class="px-4 py-2 bg-gradient-to-r from-orange-400 to-pink-500 text-white rounded-xl text-sm font-medium shadow-sm">导入</button>
+          </div>
+        </div>
+      </div>
+    </Transition>
+
+    <Transition name="modal">
+      <div v-if="showTagModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4" @click.self="showTagModal = false">
+        <div class="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
+          <h3 class="text-lg font-bold mb-2">
+            {{ tagMode === 'add' ? '🏷️ 添加标签' : '🏷️ 移除标签' }}
+          </h3>
+          <p class="text-sm text-gray-500 mb-4">
+            {{ taggingStudent ? `为 ${taggingStudent.name}` : `为选中的 ${selectedIds.size} 名学生` }}
+            {{ tagMode === 'add' ? '添加标签' : '移除标签' }}
+          </p>
+          
+          <div v-if="allTags.length === 0" class="text-center py-6 text-gray-500">
+            <p>暂无标签</p>
+            <router-link to="/settings" class="text-orange-500 hover:text-orange-600 text-sm mt-2 inline-block">
+              去创建标签 →
+            </router-link>
+          </div>
+          
+          <div v-else class="flex flex-wrap gap-2">
+            <button
+              v-for="tag in allTags"
+              :key="tag.id"
+              @click="toggleTag(tag)"
+              class="px-4 py-2 rounded-full text-sm font-medium transition-all"
+              :class="isTagApplied(tag) 
+                ? 'ring-2 ring-offset-2 ring-gray-400' 
+                : 'opacity-80 hover:opacity-100 hover:scale-105'"
+              :style="{ backgroundColor: tag.color, color: 'white' }"
+            >
+              {{ tag.name }}
+              <span v-if="isTagApplied(tag)" class="ml-1">✓</span>
+            </button>
+          </div>
+          
+          <div class="flex justify-end gap-2 mt-6">
+            <button @click="showTagModal = false" class="px-4 py-2 text-gray-500 hover:bg-gray-100 rounded-xl text-sm font-medium transition-colors">关闭</button>
           </div>
         </div>
       </div>

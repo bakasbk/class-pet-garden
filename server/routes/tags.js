@@ -137,4 +137,153 @@ router.get('/colors', (req, res) => {
   res.json({ colors: PRESET_COLORS })
 })
 
+// 获取学生的标签
+router.get('/student/:studentId', authMiddleware, (req, res) => {
+  const { studentId } = req.params
+
+  const tags = db.prepare(`
+    SELECT st.* FROM student_tags st
+    JOIN student_tag_relations str ON st.id = str.tag_id
+    WHERE str.student_id = ? AND st.user_id = ?
+    ORDER BY str.created_at DESC
+  `).all(studentId, req.userId)
+
+  res.json({ tags })
+})
+
+// 给学生添加标签
+router.post('/student/:studentId', authMiddleware, (req, res) => {
+  const { studentId } = req.params
+  const { tagId } = req.body
+
+  if (!tagId) {
+    return res.status(400).json({ error: '缺少标签ID' })
+  }
+
+  // 检查标签是否属于当前用户
+  const tag = db.prepare(`
+    SELECT * FROM student_tags WHERE id = ? AND user_id = ?
+  `).get(tagId, req.userId)
+
+  if (!tag) {
+    return res.status(404).json({ error: '标签不存在或无权使用' })
+  }
+
+  // 检查是否已存在
+  const existing = db.prepare(`
+    SELECT id FROM student_tag_relations
+    WHERE student_id = ? AND tag_id = ?
+  `).get(studentId, tagId)
+
+  if (existing) {
+    return res.status(400).json({ error: '该学生已有此标签' })
+  }
+
+  const id = uuidv4()
+  const now = Date.now()
+
+  db.prepare(`
+    INSERT INTO student_tag_relations (id, student_id, tag_id, created_at)
+    VALUES (?, ?, ?, ?)
+  `).run(id, studentId, tagId, now)
+
+  res.json({ success: true, tag })
+})
+
+// 移除学生的标签
+router.delete('/student/:studentId/:tagId', authMiddleware, (req, res) => {
+  const { studentId, tagId } = req.params
+
+  // 检查标签是否属于当前用户
+  const tag = db.prepare(`
+    SELECT * FROM student_tags WHERE id = ? AND user_id = ?
+  `).get(tagId, req.userId)
+
+  if (!tag) {
+    return res.status(404).json({ error: '标签不存在或无权操作' })
+  }
+
+  db.prepare(`
+    DELETE FROM student_tag_relations
+    WHERE student_id = ? AND tag_id = ?
+  `).run(studentId, tagId)
+
+  res.json({ success: true })
+})
+
+// 批量给学生添加标签
+router.post('/batch-add', authMiddleware, (req, res) => {
+  const { studentIds, tagId } = req.body
+
+  if (!studentIds || !Array.isArray(studentIds) || studentIds.length === 0) {
+    return res.status(400).json({ error: '缺少学生ID列表' })
+  }
+
+  if (!tagId) {
+    return res.status(400).json({ error: '缺少标签ID' })
+  }
+
+  // 检查标签是否属于当前用户
+  const tag = db.prepare(`
+    SELECT * FROM student_tags WHERE id = ? AND user_id = ?
+  `).get(tagId, req.userId)
+
+  if (!tag) {
+    return res.status(404).json({ error: '标签不存在或无权使用' })
+  }
+
+  const now = Date.now()
+  const insertStmt = db.prepare(`
+    INSERT OR IGNORE INTO student_tag_relations (id, student_id, tag_id, created_at)
+    VALUES (?, ?, ?, ?)
+  `)
+
+  const insertMany = db.transaction((ids) => {
+    for (const studentId of ids) {
+      insertStmt.run(uuidv4(), studentId, tagId, now)
+    }
+  })
+
+  insertMany(studentIds)
+
+  res.json({ success: true, count: studentIds.length })
+})
+
+// 批量移除学生的标签
+router.post('/batch-remove', authMiddleware, (req, res) => {
+  const { studentIds, tagId } = req.body
+
+  if (!studentIds || !Array.isArray(studentIds) || studentIds.length === 0) {
+    return res.status(400).json({ error: '缺少学生ID列表' })
+  }
+
+  if (!tagId) {
+    return res.status(400).json({ error: '缺少标签ID' })
+  }
+
+  // 检查标签是否属于当前用户
+  const tag = db.prepare(`
+    SELECT * FROM student_tags WHERE id = ? AND user_id = ?
+  `).get(tagId, req.userId)
+
+  if (!tag) {
+    return res.status(404).json({ error: '标签不存在或无权操作' })
+  }
+
+  const deleteStmt = db.prepare(`
+    DELETE FROM student_tag_relations
+    WHERE student_id = ? AND tag_id = ?
+  `)
+
+  const deleteMany = db.transaction((ids) => {
+    for (const studentId of ids) {
+      deleteStmt.run(studentId, tagId)
+    }
+  })
+
+  deleteMany(studentIds)
+
+  res.json({ success: true, count: studentIds.length })
+})
+
 export default router
