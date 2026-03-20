@@ -71,7 +71,6 @@ const importText = ref('')
 
 const showTagModal = ref(false)
 const taggingStudent = ref<Student | null>(null)
-const tagMode = ref<'add' | 'remove'>('add')
 
 function getPetImage(student: Student): string {
   if (!student.pet_type) return ''
@@ -261,9 +260,8 @@ async function importStudents() {
   }
 }
 
-function openTagModal(student: Student | null, mode: 'add' | 'remove') {
+function openTagModal(student: Student | null) {
   taggingStudent.value = student
-  tagMode.value = mode
   showTagModal.value = true
 }
 
@@ -272,18 +270,23 @@ async function toggleTag(tag: Tag) {
     ? [taggingStudent.value.id] 
     : Array.from(selectedIds.value)
   if (studentIds.length === 0) return
+  
+  // 检查是否已应用此标签
+  const isApplied = isTagApplied(tag)
+  
   try {
-    if (tagMode.value === 'add') {
-      await api.post('/tags/batch-add', { studentIds, tagId: tag.id })
-      toast.success(`已为 ${studentIds.length} 名学生添加标签`)
-    } else {
+    if (isApplied) {
+      // 已应用则移除
       await api.post('/tags/batch-remove', { studentIds, tagId: tag.id })
       toast.success(`已为 ${studentIds.length} 名学生移除标签`)
+    } else {
+      // 未应用则添加
+      await api.post('/tags/batch-add', { studentIds, tagId: tag.id })
+      toast.success(`已为 ${studentIds.length} 名学生添加标签`)
     }
     for (const id of studentIds) {
       await loadSingleStudentTags(id)
     }
-    showTagModal.value = false
   } catch (error: any) {
     toast.error(error.response?.data?.error || '操作失败')
   }
@@ -345,16 +348,10 @@ onActivated(() => {
           <div class="flex items-center gap-2 flex-wrap justify-end">
             <template v-if="selectedIds.size > 0">
               <button
-                @click="openTagModal(null, 'add')"
-                class="px-4 py-2 text-sm text-green-600 hover:bg-green-50 border border-green-200 rounded-xl font-medium transition-colors"
-              >
-                🏷️ 添加标签 ({{ selectedIds.size }})
-              </button>
-              <button
-                @click="openTagModal(null, 'remove')"
+                @click="openTagModal(null)"
                 class="px-4 py-2 text-sm text-orange-600 hover:bg-orange-50 border border-orange-200 rounded-xl font-medium transition-colors"
               >
-                🏷️ 移除标签 ({{ selectedIds.size }})
+                🏷️ 管理标签 ({{ selectedIds.size }})
               </button>
               <button
                 @click="deleteSelected"
@@ -485,7 +482,7 @@ onActivated(() => {
                     {{ tag.name }}
                   </span>
                   <button
-                    @click="openTagModal(student, 'add')"
+                    @click="openTagModal(student)"
                     class="px-2 py-0.5 rounded-full text-xs bg-gray-100 text-gray-500 hover:bg-gray-200 transition-colors"
                   >
                     +
@@ -494,7 +491,7 @@ onActivated(() => {
               </div>
               <div class="col-span-1 text-sm font-medium text-orange-500 text-center">{{ student.total_points }}</div>
               <div class="col-span-2 text-right">
-                <button @click="openTagModal(student, 'add')" class="text-green-500 hover:text-green-600 text-sm px-2">标签</button>
+                <button @click="openTagModal(student)" class="text-green-500 hover:text-green-600 text-sm px-2">标签</button>
                 <button @click="startEdit(student)" class="text-blue-500 hover:text-blue-600 text-sm px-2">编辑</button>
                 <button @click="deleteStudent(student.id)" class="text-red-400 hover:text-red-600 text-sm px-2">删除</button>
               </div>
@@ -564,12 +561,10 @@ onActivated(() => {
     <Transition name="modal">
       <div v-if="showTagModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4" @click.self="showTagModal = false">
         <div class="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
-          <h3 class="text-lg font-bold mb-2">
-            {{ tagMode === 'add' ? '🏷️ 添加标签' : '🏷️ 移除标签' }}
-          </h3>
+          <h3 class="text-lg font-bold mb-1">🏷️ 管理标签</h3>
           <p class="text-sm text-gray-500 mb-4">
-            {{ taggingStudent ? `为 ${taggingStudent.name}` : `为选中的 ${selectedIds.size} 名学生` }}
-            {{ tagMode === 'add' ? '添加标签' : '移除标签' }}
+            {{ taggingStudent ? `为 ${taggingStudent.name}` : `为选中的 ${selectedIds.size} 名学生` }}管理标签
+            <span class="text-gray-400">（点击标签切换添加/移除）</span>
           </p>
           
           <div v-if="allTags.length === 0" class="text-center py-6 text-gray-500">
@@ -586,8 +581,8 @@ onActivated(() => {
               @click="toggleTag(tag)"
               class="px-4 py-2 rounded-full text-sm font-medium transition-all"
               :class="isTagApplied(tag) 
-                ? 'ring-2 ring-offset-2 ring-gray-400' 
-                : 'opacity-80 hover:opacity-100 hover:scale-105'"
+                ? 'ring-2 ring-offset-2 ring-gray-400 scale-105' 
+                : 'opacity-70 hover:opacity-100 hover:scale-105'"
               :style="{ backgroundColor: tag.color, color: 'white' }"
             >
               {{ tag.name }}
@@ -596,7 +591,7 @@ onActivated(() => {
           </div>
           
           <div class="flex justify-end gap-2 mt-6">
-            <button @click="showTagModal = false" class="px-4 py-2 text-gray-500 hover:bg-gray-100 rounded-xl text-sm font-medium transition-colors">关闭</button>
+            <button @click="showTagModal = false" class="px-4 py-2 bg-orange-500 text-white rounded-xl text-sm font-medium shadow-sm hover:bg-orange-600 transition-all">完成</button>
           </div>
         </div>
       </div>
