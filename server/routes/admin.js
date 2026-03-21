@@ -68,7 +68,7 @@ router.get('/stats', authMiddleware, adminMiddleware, (req, res) => {
     SELECT date(timestamp/1000, 'unixepoch', 'localtime') as date, 
            count(*) as count 
     FROM evaluation_records 
-    WHERE timestamp/1000 >= strftime('%s', 'now', '-7 days')
+    WHERE timestamp >= (strftime('%s', 'now') - 7*24*60*60) * 1000
     GROUP BY date
     ORDER BY date DESC
   `).all()
@@ -78,45 +78,40 @@ router.get('/stats', authMiddleware, adminMiddleware, (req, res) => {
 
 // 获取近7天详细统计数据
 router.get('/daily-stats', authMiddleware, adminMiddleware, (req, res) => {
-  // 生成最近7天的日期列表
-  const dates = []
-  for (let i = 6; i >= 0; i--) {
-    const date = new Date()
-    date.setDate(date.getDate() - i)
-    dates.push(date.toISOString().slice(0, 10))
-  }
+  // 计算7天前的时间戳（毫秒）
+  const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000
 
   // 每天新增用户
   const newUsers = db.prepare(`
     SELECT date(created_at/1000, 'unixepoch', 'localtime') as date, count(*) as count
     FROM users
-    WHERE is_guest = 0 AND created_at/1000 >= strftime('%s', 'now', '-7 days')
+    WHERE is_guest = 0 AND created_at >= ?
     GROUP BY date
-  `).all()
+  `).all(sevenDaysAgo)
 
   // 每天新增班级
   const newClasses = db.prepare(`
     SELECT date(created_at/1000, 'unixepoch', 'localtime') as date, count(*) as count
     FROM classes
-    WHERE created_at/1000 >= strftime('%s', 'now', '-7 days')
+    WHERE created_at >= ?
     GROUP BY date
-  `).all()
+  `).all(sevenDaysAgo)
 
   // 每天新增学生
   const newStudents = db.prepare(`
     SELECT date(created_at/1000, 'unixepoch', 'localtime') as date, count(*) as count
     FROM students
-    WHERE created_at/1000 >= strftime('%s', 'now', '-7 days')
+    WHERE created_at >= ?
     GROUP BY date
-  `).all()
+  `).all(sevenDaysAgo)
 
   // 每天评价数
   const evaluations = db.prepare(`
     SELECT date(timestamp/1000, 'unixepoch', 'localtime') as date, count(*) as count
     FROM evaluation_records
-    WHERE timestamp/1000 >= strftime('%s', 'now', '-7 days')
+    WHERE timestamp >= ?
     GROUP BY date
-  `).all()
+  `).all(sevenDaysAgo)
 
   // 转换为日期 -> 数量的映射
   const toMap = (arr) => {
@@ -129,6 +124,17 @@ router.get('/daily-stats', authMiddleware, adminMiddleware, (req, res) => {
   const classesMap = toMap(newClasses)
   const studentsMap = toMap(newStudents)
   const evalsMap = toMap(evaluations)
+
+  // 生成最近7天的日期列表（从6天前到今天，使用本地时区）
+  const dates = []
+  const now = new Date()
+  const todayStr = now.toLocaleDateString('sv-SE') // YYYY-MM-DD format in local time
+  
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(now)
+    d.setDate(d.getDate() - i)
+    dates.push(d.toLocaleDateString('sv-SE'))
+  }
 
   // 组装结果，确保每天都有数据
   const result = dates.map(date => ({
