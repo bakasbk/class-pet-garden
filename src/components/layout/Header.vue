@@ -117,13 +117,12 @@ onMounted(() => {
       <!-- Right: 游客提示 + 班级选择 + 用户 -->
       <div class="flex items-center gap-3">
         <!-- 游客提示 -->
-        <button 
+        <span 
           v-if="isGuest"
-          @click="handleLogin"
-          class="px-3 py-1 rounded-full text-xs font-bold bg-white/95 text-amber-600 hover:bg-white transition-colors shadow-sm"
+          class="text-xs text-white/80"
         >
-          游客模式 · 点击登录
-        </button>
+          当前为游客，点击头像注册登录
+        </span>
 
         <!-- 班级选择 -->
         <div v-if="classes.length > 0" class="relative">
