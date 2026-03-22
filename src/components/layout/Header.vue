@@ -105,7 +105,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <header class="bg-gradient-to-r from-amber-400 via-orange-400 to-rose-400 shadow-lg sticky top-0 z-30">
+  <header class="bg-gradient-to-r from-amber-400 via-orange-400 to-rose-400 shadow-lg sticky top-0 z-50">
     <!-- 第一行：Logo、班级选择、用户 -->
     <div class="px-4 py-3 flex items-center justify-between">
       <!-- Left: Logo -->

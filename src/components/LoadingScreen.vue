@@ -6,7 +6,7 @@ defineProps<{
 
 <template>
   <Transition name="fade">
-    <div v-if="show" class="fixed inset-0 bg-gradient-to-br from-orange-50 via-pink-50 to-purple-50 flex items-center justify-center z-[200]">
+    <div v-if="show" class="fixed inset-0 bg-gradient-to-br from-orange-50 via-pink-50 to-purple-50 flex items-center justify-center z-40">
       <div class="text-center">
         <div class="text-8xl mb-6 animate-bounce">🐕</div>
         <div class="text-xl font-bold text-gray-600">加载中...</div>
