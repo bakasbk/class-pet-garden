@@ -76,6 +76,57 @@ router.get('/stats', authMiddleware, adminMiddleware, (req, res) => {
   res.json({ stats, dailyStats })
 })
 
+// 删除用户（危险操作，级联删除班级、学生、评价记录）
+router.delete('/users/:id', authMiddleware, adminMiddleware, (req, res) => {
+  const userId = req.params.id
+
+  // 不能删除自己
+  if (userId === req.userId) {
+    return res.status(400).json({ error: '不能删除自己' })
+  }
+
+  // 检查用户是否存在
+  const user = db.prepare('SELECT id, username, is_admin FROM users WHERE id = ?').get(userId)
+  if (!user) {
+    return res.status(404).json({ error: '用户不存在' })
+  }
+
+  // 不能删除管理员（除非自己是超级管理员，但目前没有这个角色）
+  if (user.is_admin) {
+    return res.status(403).json({ error: '不能删除管理员' })
+  }
+
+  try {
+    // 开启事务，确保数据一致性
+    db.transaction(() => {
+      // 获取用户所有班级
+      const classes = db.prepare('SELECT id FROM classes WHERE user_id = ?').all(userId)
+      const classIds = classes.map(c => c.id)
+
+      if (classIds.length > 0) {
+        // 删除评价记录
+        const deleteEvals = db.prepare('DELETE FROM evaluation_records WHERE class_id IN (' + classIds.map(() => '?').join(',') + ')')
+        deleteEvals.run(...classIds)
+
+        // 删除学生
+        const deleteStudents = db.prepare('DELETE FROM students WHERE class_id IN (' + classIds.map(() => '?').join(',') + ')')
+        deleteStudents.run(...classIds)
+
+        // 删除班级
+        db.prepare('DELETE FROM classes WHERE user_id = ?').run(userId)
+      }
+
+      // 删除用户
+      db.prepare('DELETE FROM users WHERE id = ?').run(userId)
+    })()
+
+    res.json({ success: true, message: `已删除用户 ${user.username}` })
+  } catch (err) {
+    console.error('删除用户失败:', err)
+    res.status(500).json({ error: '删除失败，请稍后重试' })
+  }
+})
+
 // 获取近7天详细统计数据
 router.get('/daily-stats', authMiddleware, adminMiddleware, (req, res) => {
   // 计算7天前的时间戳（毫秒）

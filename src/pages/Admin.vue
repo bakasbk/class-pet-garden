@@ -21,6 +21,11 @@ const isLoading = ref(true)
 const expandedTeacher = ref<string | null>(null)
 const activeTab = ref<'teachers' | 'stats'>('teachers')
 
+// 删除确认弹窗状态
+const showDeleteConfirm = ref(false)
+const teacherToDelete = ref<Teacher | null>(null)
+const isDeleting = ref(false)
+
 onMounted(async () => {
   if (isGuest.value || !isAdmin.value) { toast.error('需要管理员权限'); router.push('/'); return }
   await loadData()
@@ -35,14 +40,8 @@ async function loadData() {
     ])
     teachers.value = teachersRes.data.teachers
     stats.value = statsRes.data.stats
-    // 兼容旧接口格式
-    dailyStats.value = (statsRes.data.dailyStats || []).map((d: any) => ({
-      date: d.date,
-      newUsers: 0,
-      newClasses: 0,
-      newStudents: 0,
-      evaluations: d.count
-    }))
+    // 加载详细的每日统计数据
+    await loadDailyStats()
   } catch (e: any) {
     toast.error(e.response?.data?.error || '加载失败')
   } finally {
@@ -51,11 +50,12 @@ async function loadData() {
 }
 
 async function loadDailyStats() {
+  if (dailyStats.value.length > 0) return // 已经加载过
   try {
     const res = await api.get('/admin/daily-stats')
     dailyStats.value = res.data.dailyStats
   } catch (e: any) {
-    toast.error('加载统计数据失败')
+    console.error('加载统计数据失败', e)
   }
 }
 
@@ -66,7 +66,7 @@ function formatShortDate(date: string) { return date.slice(5) }
 const totalStudents = computed(() => teachers.value.reduce((sum, t) => sum + t.totalStudents, 0))
 const totalEvals = computed(() => teachers.value.reduce((sum, t) => sum + t.totalEvals, 0))
 
-// 计算最大值用于图表高度
+// 计算最大值用于图表
 const maxEvals = computed(() => Math.max(...dailyStats.value.map(d => d.evaluations), 1))
 const maxNewStudents = computed(() => Math.max(...dailyStats.value.map(d => d.newStudents), 1))
 const maxNewUsers = computed(() => Math.max(...dailyStats.value.map(d => d.newUsers), 1))
@@ -79,6 +79,56 @@ const weekTotal = computed(() => ({
   newStudents: dailyStats.value.reduce((sum, d) => sum + d.newStudents, 0),
   evaluations: dailyStats.value.reduce((sum, d) => sum + d.evaluations, 0)
 }))
+
+// 折线图路径生成
+const chartHeight = 60
+const paddingY = 10
+const defaultWidth = 300
+
+function generateLinePath(data: number[], max: number): string {
+  if (data.length === 0) return ''
+  const stepX = defaultWidth / Math.max(data.length - 1, 1)
+  const points = data.map((val, i) => {
+    const x = i * stepX
+    const y = chartHeight - paddingY - (val / Math.max(max, 1)) * (chartHeight - paddingY * 2)
+    return `${x},${y}`
+  })
+  return `M ${points.join(' L ')}`
+}
+
+function generateAreaPath(data: number[], max: number): string {
+  if (data.length === 0) return ''
+  const linePath = generateLinePath(data, max)
+  return `${linePath} L ${defaultWidth},${chartHeight - paddingY} L 0,${chartHeight - paddingY} Z`
+}
+
+// 删除相关
+function confirmDelete(teacher: Teacher) {
+  teacherToDelete.value = teacher
+  showDeleteConfirm.value = true
+}
+
+function cancelDelete() {
+  showDeleteConfirm.value = false
+  teacherToDelete.value = null
+}
+
+async function executeDelete() {
+  if (!teacherToDelete.value) return
+  
+  isDeleting.value = true
+  try {
+    await api.delete(`/admin/users/${teacherToDelete.value.id}`)
+    toast.success(`已删除用户 ${teacherToDelete.value.username}`)
+    teachers.value = teachers.value.filter(t => t.id !== teacherToDelete.value!.id)
+    showDeleteConfirm.value = false
+    teacherToDelete.value = null
+  } catch (e: any) {
+    toast.error(e.response?.data?.error || '删除失败')
+  } finally {
+    isDeleting.value = false
+  }
+}
 </script>
 
 <template>
@@ -153,6 +203,15 @@ const weekTotal = computed(() => ({
                   <div class="text-center"><div class="font-bold text-blue-500">{{ teacher.classCount }}</div><div class="text-gray-400">班级</div></div>
                   <div class="text-center"><div class="font-bold text-green-500">{{ teacher.totalStudents }}</div><div class="text-gray-400">学生</div></div>
                   <div class="text-center"><div class="font-bold text-purple-500">{{ teacher.totalEvals }}</div><div class="text-gray-400">评价</div></div>
+                  <!-- 删除按钮 -->
+                  <button 
+                    v-if="!teacher.isAdmin"
+                    @click.stop="confirmDelete(teacher)"
+                    class="px-2 py-1 text-red-500 hover:bg-red-50 rounded transition-colors"
+                    title="删除用户"
+                  >
+                    🗑️
+                  </button>
                   <div class="text-gray-400">
                     <span class="inline-block transition-transform duration-200" :class="expandedTeacher === teacher.id ? 'rotate-180' : ''">▼</span>
                   </div>
@@ -200,58 +259,80 @@ const weekTotal = computed(() => ({
             </div>
           </div>
 
-          <!-- 评价趋势图 -->
-          <div class="mb-6">
-            <h4 class="text-sm font-medium text-gray-700 mb-3">📈 评价趋势</h4>
-            <div class="flex items-end gap-2 h-32 bg-gray-50 rounded-lg p-3">
-              <div v-for="day in dailyStats" :key="day.date" class="flex-1 flex flex-col items-center">
-                <div 
-                  class="w-full bg-gradient-to-t from-purple-500 to-purple-400 rounded-t transition-all duration-300"
-                  :style="{ height: `${(day.evaluations / maxEvals) * 80}px` }"
-                ></div>
-                <div class="text-xs text-gray-500 mt-1">{{ formatShortDate(day.date) }}</div>
-                <div class="text-xs font-medium text-purple-600">{{ day.evaluations }}</div>
+          <!-- 折线图 -->
+          <div class="space-y-4">
+            <!-- 新用户 -->
+            <div class="bg-gray-50 rounded-xl p-4">
+              <div class="flex items-center justify-between mb-2">
+                <h4 class="text-sm font-medium text-gray-700">🆕 新用户</h4>
+                <span class="text-xs text-orange-600 font-medium">+{{ weekTotal.newUsers }}</span>
               </div>
-            </div>
-          </div>
-
-          <!-- 新增学生趋势 -->
-          <div class="mb-6">
-            <h4 class="text-sm font-medium text-gray-700 mb-3">👥 新增学生</h4>
-            <div class="flex items-end gap-2 h-24 bg-gray-50 rounded-lg p-3">
-              <div v-for="day in dailyStats" :key="day.date" class="flex-1 flex flex-col items-center">
-                <div 
-                  class="w-full bg-gradient-to-t from-green-500 to-green-400 rounded-t transition-all duration-300"
-                  :style="{ height: `${(day.newStudents / maxNewStudents) * 60}px` }"
-                ></div>
-                <div class="text-xs text-gray-500 mt-1">{{ formatShortDate(day.date) }}</div>
-              </div>
-            </div>
-          </div>
-
-          <!-- 新用户/新班级 -->
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <h4 class="text-sm font-medium text-gray-700 mb-3">🆕 新用户</h4>
-              <div class="flex items-end gap-2 h-20 bg-gray-50 rounded-lg p-3">
-                <div v-for="day in dailyStats" :key="day.date" class="flex-1 flex flex-col items-center">
-                  <div 
-                    class="w-full bg-gradient-to-t from-orange-500 to-orange-400 rounded-t"
-                    :style="{ height: `${(day.newUsers / maxNewUsers) * 50}px` }"
-                  ></div>
-                  <div class="text-xs text-gray-400 mt-1">{{ day.newUsers || '-' }}</div>
+              <svg viewBox="0 0 300 60" class="w-full h-16" preserveAspectRatio="none">
+                <defs><linearGradient id="orangeGradient" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#f97316" /><stop offset="100%" stop-color="#f97316" stop-opacity="0" /></linearGradient></defs>
+                <path :d="generateAreaPath(dailyStats.map(d => d.newUsers), Math.max(maxNewUsers, 1))" fill="url(#orangeGradient)" opacity="0.3" />
+                <path :d="generateLinePath(dailyStats.map(d => d.newUsers), Math.max(maxNewUsers, 1))" fill="none" stroke="#f97316" stroke-width="2" stroke-linecap="round" />
+              </svg>
+              <div class="flex justify-between mt-1">
+                <div v-for="day in dailyStats" :key="day.date" class="text-center flex-1">
+                  <div class="text-xs font-medium text-orange-600">{{ day.newUsers || '-' }}</div>
+                  <div class="text-xs text-gray-400">{{ formatShortDate(day.date) }}</div>
                 </div>
               </div>
             </div>
-            <div>
-              <h4 class="text-sm font-medium text-gray-700 mb-3">📚 新班级</h4>
-              <div class="flex items-end gap-2 h-20 bg-gray-50 rounded-lg p-3">
-                <div v-for="day in dailyStats" :key="day.date" class="flex-1 flex flex-col items-center">
-                  <div 
-                    class="w-full bg-gradient-to-t from-blue-500 to-blue-400 rounded-t"
-                    :style="{ height: `${(day.newClasses / maxNewClasses) * 50}px` }"
-                  ></div>
-                  <div class="text-xs text-gray-400 mt-1">{{ day.newClasses || '-' }}</div>
+
+            <!-- 新班级 -->
+            <div class="bg-gray-50 rounded-xl p-4">
+              <div class="flex items-center justify-between mb-2">
+                <h4 class="text-sm font-medium text-gray-700">📚 新班级</h4>
+                <span class="text-xs text-blue-600 font-medium">+{{ weekTotal.newClasses }}</span>
+              </div>
+              <svg viewBox="0 0 300 60" class="w-full h-16" preserveAspectRatio="none">
+                <defs><linearGradient id="blueGradient" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#3b82f6" /><stop offset="100%" stop-color="#3b82f6" stop-opacity="0" /></linearGradient></defs>
+                <path :d="generateAreaPath(dailyStats.map(d => d.newClasses), Math.max(maxNewClasses, 1))" fill="url(#blueGradient)" opacity="0.3" />
+                <path :d="generateLinePath(dailyStats.map(d => d.newClasses), Math.max(maxNewClasses, 1))" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" />
+              </svg>
+              <div class="flex justify-between mt-1">
+                <div v-for="day in dailyStats" :key="day.date" class="text-center flex-1">
+                  <div class="text-xs font-medium text-blue-600">{{ day.newClasses || '-' }}</div>
+                  <div class="text-xs text-gray-400">{{ formatShortDate(day.date) }}</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 新增学生 -->
+            <div class="bg-gray-50 rounded-xl p-4">
+              <div class="flex items-center justify-between mb-2">
+                <h4 class="text-sm font-medium text-gray-700">👥 新增学生</h4>
+                <span class="text-xs text-green-600 font-medium">+{{ weekTotal.newStudents }}</span>
+              </div>
+              <svg viewBox="0 0 300 60" class="w-full h-16" preserveAspectRatio="none">
+                <defs><linearGradient id="greenGradient" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#22c55e" /><stop offset="100%" stop-color="#22c55e" stop-opacity="0" /></linearGradient></defs>
+                <path :d="generateAreaPath(dailyStats.map(d => d.newStudents), maxNewStudents)" fill="url(#greenGradient)" opacity="0.3" />
+                <path :d="generateLinePath(dailyStats.map(d => d.newStudents), maxNewStudents)" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" />
+              </svg>
+              <div class="flex justify-between mt-1">
+                <div v-for="day in dailyStats" :key="day.date" class="text-center flex-1">
+                  <div class="text-xs font-medium text-green-600">{{ day.newStudents || '-' }}</div>
+                  <div class="text-xs text-gray-400">{{ formatShortDate(day.date) }}</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 评价趋势 -->
+            <div class="bg-gray-50 rounded-xl p-4">
+              <div class="flex items-center justify-between mb-2">
+                <h4 class="text-sm font-medium text-gray-700">📈 评价趋势</h4>
+                <span class="text-xs text-purple-600 font-medium">{{ weekTotal.evaluations }} 条</span>
+              </div>
+              <svg viewBox="0 0 300 60" class="w-full h-16" preserveAspectRatio="none">
+                <defs><linearGradient id="purpleGradient" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#a855f7" /><stop offset="100%" stop-color="#a855f7" stop-opacity="0" /></linearGradient></defs>
+                <path :d="generateAreaPath(dailyStats.map(d => d.evaluations), maxEvals)" fill="url(#purpleGradient)" opacity="0.3" />
+                <path :d="generateLinePath(dailyStats.map(d => d.evaluations), maxEvals)" fill="none" stroke="#a855f7" stroke-width="2" stroke-linecap="round" />
+              </svg>
+              <div class="flex justify-between mt-1">
+                <div v-for="day in dailyStats" :key="day.date" class="text-center flex-1">
+                  <div class="text-xs font-medium text-purple-600">{{ day.evaluations || '-' }}</div>
+                  <div class="text-xs text-gray-400">{{ formatShortDate(day.date) }}</div>
                 </div>
               </div>
             </div>
@@ -265,6 +346,48 @@ const weekTotal = computed(() => ({
         <div class="grid grid-cols-2 gap-4 text-sm">
           <div>总学生数: <span class="font-bold text-green-600">{{ totalStudents }} 人</span></div>
           <div>总评价数: <span class="font-bold text-purple-600">{{ totalEvals }} 条</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 删除确认弹窗 -->
+    <div v-if="showDeleteConfirm" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" @click.self="cancelDelete">
+      <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden">
+        <div class="bg-red-500 px-6 py-4">
+          <h3 class="text-xl font-bold text-white flex items-center gap-2">
+            ⚠️ 危险操作
+          </h3>
+        </div>
+        <div class="p-6">
+          <p class="text-gray-700 mb-4">
+            确定要删除用户 <span class="font-bold text-red-600">{{ teacherToDelete?.username }}</span> 吗？
+          </p>
+          <div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+            <p class="text-sm text-red-700 font-medium mb-2">此操作将同时删除：</p>
+            <ul class="text-sm text-red-600 space-y-1">
+              <li>• {{ teacherToDelete?.classCount || 0 }} 个班级</li>
+              <li>• {{ teacherToDelete?.totalStudents || 0 }} 名学生</li>
+              <li>• {{ teacherToDelete?.totalEvals || 0 }} 条评价记录</li>
+            </ul>
+            <p class="text-sm text-red-700 mt-3 font-medium">⚠️ 此操作不可恢复！</p>
+          </div>
+          <div class="flex gap-3">
+            <button 
+              @click="cancelDelete"
+              :disabled="isDeleting"
+              class="flex-1 px-4 py-3 border border-gray-300 rounded-xl text-gray-700 font-medium hover:bg-gray-50 transition-colors disabled:opacity-50"
+            >
+              取消
+            </button>
+            <button 
+              @click="executeDelete"
+              :disabled="isDeleting"
+              class="flex-1 px-4 py-3 bg-red-500 text-white rounded-xl font-medium hover:bg-red-600 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              <span v-if="isDeleting" class="animate-spin">⏳</span>
+              <span v-else>确认删除</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>
