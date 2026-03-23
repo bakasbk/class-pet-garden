@@ -2,10 +2,13 @@
 import { ref, onMounted, computed } from 'vue'
 import { useAuth } from '@/composables/useAuth'
 import { useToast } from '@/composables/useToast'
+import { useConfirm } from '@/composables/useConfirm'
 import PageLayout from '@/components/layout/PageLayout.vue'
+import ConfirmDialog from '@/components/ConfirmDialog.vue'
 
 const { user, isGuest, isAdmin, api } = useAuth()
 const toast = useToast()
+const { confirmDialog, showConfirm, closeConfirm } = useConfirm()
 
 interface Post {
   id: string
@@ -205,32 +208,46 @@ async function addComment() {
 
 async function deletePost() {
   if (!selectedPost.value) return
-  if (!confirm('确定要删除这篇帖子吗？')) return
   
-  try {
-    await api.delete(`/posts/${selectedPost.value.id}`)
-    toast.success('删除成功')
-    posts.value = posts.value.filter(p => p.id !== selectedPost.value!.id)
-    showDetailModal.value = false
-  } catch (e: any) {
-    toast.error(e.response?.data?.error || '删除失败')
-  }
+  showConfirm({
+    title: '删除帖子',
+    message: '确定要删除这篇帖子吗？',
+    confirmText: '删除',
+    type: 'danger',
+    onConfirm: async () => {
+      try {
+        await api.delete(`/posts/${selectedPost.value!.id}`)
+        toast.success('删除成功')
+        posts.value = posts.value.filter(p => p.id !== selectedPost.value!.id)
+        showDetailModal.value = false
+      } catch (e: any) {
+        toast.error(e.response?.data?.error || '删除失败')
+      }
+    }
+  })
 }
 
 async function deleteComment(commentId: string) {
-  if (!confirm('确定要删除这条评论吗？')) return
   if (!selectedPost.value) return
   
-  try {
-    await api.delete(`/posts/${selectedPost.value.id}/comments/${commentId}`)
-    comments.value = comments.value.filter(c => c.id !== commentId)
-    selectedPost.value.comment_count--
-    const post = posts.value.find(p => p.id === selectedPost.value!.id)
-    if (post) post.comment_count--
-    toast.success('删除成功')
-  } catch (e: any) {
-    toast.error(e.response?.data?.error || '删除失败')
-  }
+  showConfirm({
+    title: '删除评论',
+    message: '确定要删除这条评论吗？',
+    confirmText: '删除',
+    type: 'danger',
+    onConfirm: async () => {
+      try {
+        await api.delete(`/posts/${selectedPost.value!.id}/comments/${commentId}`)
+        comments.value = comments.value.filter(c => c.id !== commentId)
+        selectedPost.value!.comment_count--
+        const post = posts.value.find(p => p.id === selectedPost.value!.id)
+        if (post) post.comment_count--
+        toast.success('删除成功')
+      } catch (e: any) {
+        toast.error(e.response?.data?.error || '删除失败')
+      }
+    }
+  })
 }
 
 const canPost = computed(() => user.value && !isGuest.value)
@@ -489,6 +506,7 @@ const canPost = computed(() => user.value && !isGuest.value)
       </div>
     </div>
   </PageLayout>
+  <ConfirmDialog :show="confirmDialog.show" :title="confirmDialog.title" :message="confirmDialog.message" :confirm-text="confirmDialog.confirmText" :cancel-text="confirmDialog.cancelText" :type="confirmDialog.type" @confirm="confirmDialog.onConfirm" @cancel="closeConfirm" />
 </template>
 
 <style scoped>
