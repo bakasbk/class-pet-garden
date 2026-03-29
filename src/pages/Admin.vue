@@ -10,7 +10,7 @@ const toast = useToast()
 const router = useRouter()
 
 interface TeacherClass { id: string; name: string; student_count: number; eval_count: number }
-interface Teacher { id: string; username: string; isAdmin: boolean; createdAt: number; classCount: number; totalStudents: number; totalEvals: number; lastEvalTime: number | null; classes: TeacherClass[] }
+interface Teacher { id: string; username: string; isAdmin: boolean; createdAt: number; classCount: number; totalStudents: number; totalEvals: number; lastEvalTime: number | null; todayEvals: number; classes: TeacherClass[] }
 interface Stats { teachers: number; classes: number; students: number; evaluations: number; todayEvaluations: number }
 interface DailyStat { date: string; newUsers: number; newClasses: number; newStudents: number; evaluations: number }
 
@@ -233,6 +233,9 @@ async function executeDelete() {
                       <span class="text-gray-400">|</span>
                       <span :class="isInactive(teacher) ? 'text-red-500 font-medium' : 'text-gray-500'">
                         {{ teacher.lastEvalTime ? '最后评价于 ' + formatDate(teacher.lastEvalTime) : '从未评价' }}
+                        <span v-if="teacher.todayEvals > 0" class="text-orange-500 font-medium ml-1">
+                          (今日 {{ teacher.todayEvals }} 次)
+                        </span>
                       </span>
                     </div>
                   </div>

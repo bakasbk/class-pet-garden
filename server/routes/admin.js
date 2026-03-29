@@ -42,6 +42,14 @@ router.get('/teachers', authMiddleware, adminMiddleware, (req, res) => {
       WHERE user_id = ?
     `).get(teacher.id)
 
+    // 获取今日评价次数
+    const todayEvals = db.prepare(`
+      SELECT count(*) as count
+      FROM evaluation_records
+      WHERE user_id = ?
+        AND date(timestamp/1000, 'unixepoch', 'localtime') = date('now', 'localtime')
+    `).get(teacher.id)
+
     return {
       id: teacher.id,
       username: teacher.username,
@@ -51,6 +59,7 @@ router.get('/teachers', authMiddleware, adminMiddleware, (req, res) => {
       totalStudents,
       totalEvals,
       lastEvalTime: lastEval?.last_time || null,
+      todayEvals: todayEvals.count,
       classes
     }
   })
