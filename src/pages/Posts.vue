@@ -306,7 +306,7 @@ const canPost = computed(() => user.value && !isGuest.value)
             </div>
             <div class="flex-1 min-w-0">
               <h3 class="font-medium text-gray-800 truncate">{{ post.title }}</h3>
-              <p class="text-sm text-gray-500 line-clamp-2 mt-1">{{ post.content }}</p>
+              <p class="text-sm text-gray-500 line-clamp-2 mt-1 whitespace-pre-wrap">{{ post.content }}</p>
               <div class="flex items-center gap-4 mt-2 text-sm text-gray-400">
                 <span :class="post.author_is_admin ? 'text-orange-500 font-medium' : ''">{{ showAuthorName(post.author_name, post.author_is_admin) }}</span>
                 <span>{{ formatDate(post.created_at) }}</span>
@@ -475,7 +475,7 @@ const canPost = computed(() => user.value && !isGuest.value)
                       <span :class="comment.author_is_admin ? 'text-orange-500 font-medium' : 'font-medium text-gray-700'" class="text-sm">{{ showAuthorName(comment.author_name, comment.author_is_admin) }}</span>
                       <span class="text-xs text-gray-400">{{ formatDate(comment.created_at) }}</span>
                     </div>
-                    <p class="text-gray-600 text-sm mt-1">{{ comment.content }}</p>
+                    <p class="text-gray-600 text-sm mt-1 whitespace-pre-wrap">{{ comment.content }}</p>
                   </div>
                   <button 
                     v-if="user?.id === comment.author_id || isAdmin"
