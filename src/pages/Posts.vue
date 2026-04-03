@@ -300,8 +300,9 @@ const canPost = computed(() => user.value && !isGuest.value)
           class="bg-white rounded-xl shadow-sm p-4 cursor-pointer hover:shadow-md transition-shadow"
         >
           <div class="flex items-start gap-3">
-            <div class="w-10 h-10 rounded-full bg-gradient-to-r from-blue-400 to-indigo-500 flex items-center justify-center text-white font-bold shrink-0">
-              {{ post.author_name.charAt(0).toUpperCase() }}
+            <div class="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold shrink-0"
+               :class="post.author_is_admin ? 'bg-gradient-to-r from-orange-400 to-amber-500' : 'bg-gradient-to-r from-blue-400 to-indigo-500'">
+              {{ post.author_is_admin ? '🐾' : post.author_name.charAt(0).toUpperCase() }}
             </div>
             <div class="flex-1 min-w-0">
               <h3 class="font-medium text-gray-800 truncate">{{ post.title }}</h3>
@@ -370,11 +371,11 @@ const canPost = computed(() => user.value && !isGuest.value)
               v-model="newContent"
               placeholder="写下你的建议或想法..."
               rows="3"
-              maxlength="100"
+              maxlength="200"
               class="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent resize-none"
             ></textarea>
-            <div class="text-right text-xs mt-1" :class="newContent.length > 100 ? 'text-red-500' : 'text-gray-400'">
-              {{ newContent.length }}/100
+            <div class="text-right text-xs mt-1" :class="newContent.length > 200 ? 'text-red-500' : 'text-gray-400'">
+              {{ newContent.length }}/200
             </div>
           </div>
           <div class="flex gap-3">
@@ -465,8 +466,9 @@ const canPost = computed(() => user.value && !isGuest.value)
               
               <div v-else class="space-y-4">
                 <div v-for="comment in comments" :key="comment.id" class="flex gap-3">
-                  <div class="w-8 h-8 rounded-full bg-gradient-to-r from-purple-400 to-pink-400 flex items-center justify-center text-white text-sm font-bold shrink-0">
-                    {{ comment.author_name.charAt(0).toUpperCase() }}
+                  <div class="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold shrink-0"
+                    :class="comment.author_is_admin ? 'bg-gradient-to-r from-orange-400 to-amber-500' : 'bg-gradient-to-r from-purple-400 to-pink-400'">
+                    {{ comment.author_is_admin ? '🐾' : comment.author_name.charAt(0).toUpperCase() }}
                   </div>
                   <div class="flex-1">
                     <div class="flex items-center gap-2">
@@ -493,17 +495,17 @@ const canPost = computed(() => user.value && !isGuest.value)
                       v-model="newComment"
                       type="text"
                       placeholder="写下你的评论..."
-                      maxlength="100"
+                      maxlength="200"
                       class="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                       @keyup.enter="addComment"
                     />
-                    <div class="text-right text-xs mt-1" :class="newComment.length > 100 ? 'text-red-500' : 'text-gray-400'">
-                      {{ newComment.length }}/100
+                    <div class="text-right text-xs mt-1" :class="newComment.length > 200 ? 'text-red-500' : 'text-gray-400'">
+                      {{ newComment.length }}/200
                     </div>
                   </div>
                   <button 
                     @click="addComment"
-                    :disabled="isSubmitting || !newComment.trim() || newComment.length > 100"
+                    :disabled="isSubmitting || !newComment.trim() || newComment.length > 200"
                     class="px-4 py-2 bg-orange-500 text-white rounded-xl font-medium hover:bg-orange-600 transition-colors disabled:opacity-50 self-start"
                   >
                     发送
