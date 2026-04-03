@@ -74,8 +74,8 @@ router.post('/', authMiddleware, (req, res) => {
   if (!content || !content.trim()) {
     return res.status(400).json({ error: '内容不能为空' })
   }
-  if (content.length > 100) {
-    return res.status(400).json({ error: '内容不能超过100字' })
+  if (content.length > 300) {
+    return res.status(400).json({ error: '内容不能超过300字' })
   }
 
   const id = randomUUID()
@@ -192,8 +192,8 @@ router.post('/:id/comments', authMiddleware, (req, res) => {
   if (!content || !content.trim()) {
     return res.status(400).json({ error: '评论内容不能为空' })
   }
-  if (content.length > 100) {
-    return res.status(400).json({ error: '评论不能超过100字' })
+  if (content.length > 300) {
+    return res.status(400).json({ error: '评论不能超过300字' })
   }
 
   const post = db.prepare('SELECT id FROM posts WHERE id = ?').get(req.params.id)
