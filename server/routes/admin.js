@@ -139,12 +139,35 @@ router.delete('/users/:id', authMiddleware, adminMiddleware, (req, res) => {
         const deleteEvals = db.prepare('DELETE FROM evaluation_records WHERE class_id IN (' + classIds.map(() => '?').join(',') + ')')
         deleteEvals.run(...classIds)
 
+        // 删除学生-标签关联
+        const students = db.prepare('SELECT id FROM students WHERE class_id IN (' + classIds.map(() => '?').join(',') + ')').all(...classIds)
+        const studentIds = students.map(s => s.id)
+        if (studentIds.length > 0) {
+          db.prepare('DELETE FROM student_tag_relations WHERE student_id IN (' + studentIds.map(() => '?').join(',') + ')').run(...studentIds)
+        }
+
         // 删除学生
         const deleteStudents = db.prepare('DELETE FROM students WHERE class_id IN (' + classIds.map(() => '?').join(',') + ')')
         deleteStudents.run(...classIds)
 
         // 删除班级
         db.prepare('DELETE FROM classes WHERE user_id = ?').run(userId)
+      }
+
+      // 删除用户标签（会级联删除 student_tag_relations，因为有外键）
+      db.prepare('DELETE FROM student_tags WHERE user_id = ?').run(userId)
+
+      // 删除用户的帖子评论
+      db.prepare('DELETE FROM post_comments WHERE user_id = ?').run(userId)
+
+      // 获取用户的帖子
+      const posts = db.prepare('SELECT id FROM posts WHERE user_id = ?').all(userId)
+      const postIds = posts.map(p => p.id)
+      if (postIds.length > 0) {
+        // 删除帖子的评论
+        db.prepare('DELETE FROM post_comments WHERE post_id IN (' + postIds.map(() => '?').join(',') + ')').run(...postIds)
+        // 删除帖子
+        db.prepare('DELETE FROM posts WHERE user_id = ?').run(userId)
       }
 
       // 删除用户
