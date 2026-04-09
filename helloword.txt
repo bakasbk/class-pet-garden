@@ -1,4 +1,0 @@
-response = requests.get("https://baidu.com")
-html = response.text
-
-print(html)
